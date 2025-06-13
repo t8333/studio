@@ -80,11 +80,6 @@ export default function LoginPage() {
           </CardFooter>
         </form>
       </Card>
-      <div className="mt-4 text-center text-sm text-muted-foreground">
-        <p>Usuarios de prueba:</p>
-        <p>Admin: aranza / aranza1</p>
-        <p>Invitado: invitado / invitado</p>
-      </div>
     </div>
   );
 }
