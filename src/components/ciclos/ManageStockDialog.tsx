@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -28,6 +29,8 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { useToast } from '@/hooks/use-toast';
 import { updateCycleStock } from '@/lib/actions/ciclos.actions';
 import type { Cycle, Product, CycleProductStock } from '@/types';
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { PackageOpen } from 'lucide-react';
 
 const manageStockFormSchema = z.object({
   stockProductos: z.array(z.object({
@@ -63,14 +66,13 @@ export function ManageStockDialog({ cycle, allProducts, trigger }: ManageStockDi
   
   useEffect(() => {
     if (open) {
-      // Initialize form with current cycle stock, ensuring all products are listed
       const currentStockMap = new Map(cycle.stockProductos.map(item => [item.productoId, item.cantidad]));
       const fullStockArray = allProducts.map(product => ({
         productoId: product.id,
         cantidad: currentStockMap.get(product.id) || 0,
       }));
-      replace(fullStockArray); // Using replace to set the field array
-      form.reset({ stockProductos: fullStockArray }); // Reset form values as well
+      replace(fullStockArray); 
+      form.reset({ stockProductos: fullStockArray }); 
     }
   }, [open, cycle, allProducts, form, replace]);
 
@@ -105,47 +107,57 @@ export function ManageStockDialog({ cycle, allProducts, trigger }: ManageStockDi
             Ajusta las cantidades de stock para cada producto en este ciclo.
           </DialogDescription>
         </DialogHeader>
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)}>
-            <ScrollArea className="h-[300px] my-4 pr-3">
-              <div className="space-y-3">
-                {fields.map((field, index) => {
-                  const productDetails = allProducts.find(p => p.id === field.productoId);
-                  return (
-                    <FormField
-                      key={field.id}
-                      control={form.control}
-                      name={`stockProductos.${index}.cantidad`}
-                      render={({ field: itemField }) => (
-                        <FormItem className="flex items-center justify-between gap-2">
-                          <FormLabel className="text-sm whitespace-nowrap overflow-hidden text-ellipsis w-2/3 pt-1" title={productDetails?.nombre}>
-                            {productDetails?.nombre || `Producto ID: ${field.productoId}`}
-                          </FormLabel>
-                          <div className="flex-1">
-                            <FormControl>
-                              <Input type="number" min="0" {...itemField} className="h-8 text-sm"/>
-                            </FormControl>
-                            <FormMessage className="text-xs" />
-                          </div>
-                        </FormItem>
-                      )}
-                    />
-                  );
-                })}
-              </div>
-            </ScrollArea>
-            <DialogFooter className="mt-4">
-              <DialogClose asChild>
-                <Button type="button" variant="outline" disabled={isSubmitting}>
-                  Cancelar
+        {allProducts.length === 0 ? (
+           <Alert variant="default" className="my-4">
+            <PackageOpen className="h-4 w-4" />
+            <AlertTitle>No hay productos</AlertTitle>
+            <AlertDescription>
+              No hay productos disponibles en el sistema para gestionar stock. Por favor, añada productos primero.
+            </AlertDescription>
+          </Alert>
+        ) : (
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(onSubmit)}>
+              <ScrollArea className="h-[300px] my-4 pr-3">
+                <div className="space-y-3">
+                  {fields.map((field, index) => {
+                    const productDetails = allProducts.find(p => p.id === field.productoId);
+                    return (
+                      <FormField
+                        key={field.id}
+                        control={form.control}
+                        name={`stockProductos.${index}.cantidad`}
+                        render={({ field: itemField }) => (
+                          <FormItem className="flex items-center justify-between gap-2">
+                            <FormLabel className="text-sm whitespace-nowrap overflow-hidden text-ellipsis w-2/3 pt-1" title={productDetails?.nombre}>
+                              {productDetails?.nombre || `Producto ID: ${field.productoId}`}
+                            </FormLabel>
+                            <div className="flex-1">
+                              <FormControl>
+                                <Input type="number" min="0" {...itemField} className="h-8 text-sm"/>
+                              </FormControl>
+                              <FormMessage className="text-xs" />
+                            </div>
+                          </FormItem>
+                        )}
+                      />
+                    );
+                  })}
+                </div>
+              </ScrollArea>
+              <DialogFooter className="mt-4">
+                <DialogClose asChild>
+                  <Button type="button" variant="outline" disabled={isSubmitting}>
+                    Cancelar
+                  </Button>
+                </DialogClose>
+                <Button type="submit" disabled={isSubmitting || allProducts.length === 0} className="bg-accent hover:bg-accent/90">
+                  {isSubmitting ? 'Guardando...' : 'Guardar Cambios'}
                 </Button>
-              </DialogClose>
-              <Button type="submit" disabled={isSubmitting} className="bg-accent hover:bg-accent/90">
-                {isSubmitting ? 'Guardando...' : 'Guardar Cambios'}
-              </Button>
-            </DialogFooter>
-          </form>
-        </Form>
+              </DialogFooter>
+            </form>
+          </Form>
+        )}
       </DialogContent>
     </Dialog>
   );

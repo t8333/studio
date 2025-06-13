@@ -1,3 +1,4 @@
+
 'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -26,6 +27,8 @@ import { saveCycle } from '@/lib/actions/ciclos.actions';
 import type { Cycle, OptionalId, Product, CycleProductStock } from '@/types';
 import { useState, useEffect } from 'react';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { PackageOpen } from 'lucide-react';
 
 const cycleFormSchema = z.object({
   nombre: z.string().min(2, { message: 'El nombre debe tener al menos 2 caracteres.' }).max(100),
@@ -60,8 +63,8 @@ export function CycleForm({ cycle, allProducts, onSuccess }: CycleFormProps) {
       fechaInicio: cycle?.fechaInicio ? parseISO(cycle.fechaInicio) : new Date(),
       fechaFin: cycle?.fechaFin ? parseISO(cycle.fechaFin) : new Date(),
       prioridadesMarketing: cycle?.prioridadesMarketing || '',
-      stockProductos: cycle?.stockProductos ? 
-        cycle.stockProductos.map(sp => ({ productoId: sp.productoId, cantidad: sp.cantidad }))
+      stockProductos: cycle?.stockProductos 
+        ? cycle.stockProductos.map(sp => ({ productoId: sp.productoId, cantidad: sp.cantidad }))
         : allProducts.map(p => ({ productoId: p.id, cantidad: 0 })),
     },
   });
@@ -76,7 +79,6 @@ export function CycleForm({ cycle, allProducts, onSuccess }: CycleFormProps) {
       ? cycle.stockProductos.map(sp => ({ productoId: sp.productoId, cantidad: sp.cantidad }))
       : allProducts.map(p => ({ productoId: p.id, cantidad: 0 }));
 
-    // Ensure all products are present in the fields array for editing
     const stockMap = new Map(initialStock.map(item => [item.productoId, item.cantidad]));
     const fullStockArray = allProducts.map(p => ({
       productoId: p.id,
@@ -249,33 +251,43 @@ export function CycleForm({ cycle, allProducts, onSuccess }: CycleFormProps) {
         <div>
           <FormLabel>Stock Inicial de Productos</FormLabel>
           <FormDescription>Define la cantidad inicial de cada producto para este ciclo.</FormDescription>
-          <ScrollArea className="h-[200px] mt-2 border rounded-md p-2">
-            <div className="space-y-3 pr-3">
-            {fields.map((field, index) => {
-              const productDetails = allProducts.find(p => p.id === field.productoId);
-              return (
-                <FormField
-                  key={field.id}
-                  control={form.control}
-                  name={`stockProductos.${index}.cantidad`}
-                  render={({ field: itemField }) => (
-                    <FormItem className="flex items-center justify-between gap-2">
-                      <FormLabel className="text-sm whitespace-nowrap overflow-hidden text-ellipsis w-2/3" title={productDetails?.nombre}>
-                        {productDetails?.nombre || `Producto ID: ${field.productoId}`}
-                      </FormLabel>
-                      <div className="flex-1">
-                        <FormControl>
-                          <Input type="number" min="0" {...itemField} className="h-8 text-sm"/>
-                        </FormControl>
-                        <FormMessage className="text-xs" />
-                      </div>
-                    </FormItem>
-                  )}
-                />
-              );
-            })}
-            </div>
-          </ScrollArea>
+          {allProducts.length === 0 ? (
+             <Alert variant="default" className="mt-2">
+              <PackageOpen className="h-4 w-4" />
+              <AlertTitle>No hay productos</AlertTitle>
+              <AlertDescription>
+                No hay productos disponibles en el sistema. Por favor, añada productos primero desde la sección &apos;Productos&apos; para poder asignarles stock.
+              </AlertDescription>
+            </Alert>
+          ) : (
+            <ScrollArea className="h-[200px] mt-2 border rounded-md p-2">
+              <div className="space-y-3 pr-3">
+              {fields.map((field, index) => {
+                const productDetails = allProducts.find(p => p.id === field.productoId);
+                return (
+                  <FormField
+                    key={field.id}
+                    control={form.control}
+                    name={`stockProductos.${index}.cantidad`}
+                    render={({ field: itemField }) => (
+                      <FormItem className="flex items-center justify-between gap-2">
+                        <FormLabel className="text-sm whitespace-nowrap overflow-hidden text-ellipsis w-2/3" title={productDetails?.nombre}>
+                          {productDetails?.nombre || `Producto ID: ${field.productoId}`}
+                        </FormLabel>
+                        <div className="flex-1">
+                          <FormControl>
+                            <Input type="number" min="0" {...itemField} className="h-8 text-sm"/>
+                          </FormControl>
+                          <FormMessage className="text-xs" />
+                        </div>
+                      </FormItem>
+                    )}
+                  />
+                );
+              })}
+              </div>
+            </ScrollArea>
+          )}
         </div>
 
         <Button type="submit" disabled={isSubmitting} className="w-full bg-accent hover:bg-accent/90">
