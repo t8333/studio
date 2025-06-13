@@ -95,11 +95,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
         </Sidebar>
         <SidebarInset className="flex flex-col">
            <header className="sticky top-0 z-10 flex h-14 items-center gap-4 border-b bg-background/80 backdrop-blur-sm px-6">
-            <SidebarTrigger className="md:hidden">
-              <Button variant="ghost" size="icon">
-                <PanelLeft />
-              </Button>
-            </SidebarTrigger>
+            <SidebarTrigger className="md:hidden" /> {/* Removed explicit Button child */}
             <h1 className="text-lg font-semibold md:text-xl font-headline">
               {navItems.find(item => pathname === item.href || (item.href !== '/' && pathname.startsWith(item.href)))?.label || (pathname === '/configuracion' ? 'Configuración' : 'MediStock')}
             </h1>
@@ -118,3 +114,4 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
 function SidebarDecorator({ children }: { children: React.ReactNode }) {
   return <div className="group/sidebar-wrapper flex min-h-svh w-full">{children}</div>;
 }
+
