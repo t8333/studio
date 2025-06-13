@@ -2,7 +2,7 @@
 import { AppLayout } from '@/components/layout/AppLayout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Boxes, Package, UsersRound } from 'lucide-react';
-import Image from 'next/image';
+// Removed: import Image from 'next/image';
 import { getDoctors } from '@/lib/actions/medicos.actions';
 import { getProducts } from '@/lib/actions/productos.actions';
 import { getCycles } from '@/lib/actions/ciclos.actions';
@@ -61,13 +61,13 @@ export default async function DashboardPage() {
         </div>
 
         <div className="mt-6 flex flex-col items-center justify-center">
-          <Image
+          {/* Se reemplaza el componente Image de Next.js por una etiqueta <img> estándar */}
+          <img
             src="/OSITOS_ASOMANDOSE.JPG"
             alt="Ilustración de ositos adorables asomándose"
-            width={600}
-            height={400}
+            width="600"
+            height="400"
             className="rounded-lg shadow-md"
-            unoptimized={true}
           />
           <p className="text-xs text-muted-foreground mt-2">Punto de diagnóstico: La imagen debería estar arriba.</p>
         </div>
