@@ -28,9 +28,10 @@ import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useToast } from '@/hooks/use-toast';
 import { updateCycleStock } from '@/lib/actions/ciclos.actions';
-import type { Cycle, Product, CycleProductStock } from '@/types';
+import type { Cycle, Product } from '@/types';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { PackageOpen } from 'lucide-react';
+import { useAuth } from '@/context/AuthContext';
 
 const manageStockFormSchema = z.object({
   stockProductos: z.array(z.object({
@@ -51,6 +52,8 @@ export function ManageStockDialog({ cycle, allProducts, trigger }: ManageStockDi
   const [open, setOpen] = useState(false);
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const { user } = useAuth();
+  const isGuest = user?.role === 'guest';
 
   const form = useForm<ManageStockFormValues>({
     resolver: zodResolver(manageStockFormSchema),
@@ -71,14 +74,17 @@ export function ManageStockDialog({ cycle, allProducts, trigger }: ManageStockDi
         productoId: product.id,
         cantidad: currentStockMap.get(product.id) || 0,
       }));
-      // form.reset must be called before replace to ensure defaultValues are correctly set for react-hook-form
       form.reset({ stockProductos: fullStockArray }); 
       replace(fullStockArray); 
     }
-  }, [open, cycle, allProducts, form.reset, replace]);
+  }, [open, cycle, allProducts, form, replace]);
 
 
   async function onSubmit(data: ManageStockFormValues) {
+    if (isGuest) {
+      toast({ title: 'Acción no permitida', description: 'Los invitados no pueden guardar cambios.', variant: 'destructive' });
+      return;
+    }
     setIsSubmitting(true);
     try {
       await updateCycleStock(cycle.id, data.stockProductos);
@@ -96,6 +102,14 @@ export function ManageStockDialog({ cycle, allProducts, trigger }: ManageStockDi
     } finally {
       setIsSubmitting(false);
     }
+  }
+
+  if (isGuest) {
+     return (
+      <Button variant="ghost" size="icon" aria-label="Gestionar stock" disabled>
+        {trigger}
+      </Button>
+    );
   }
 
   return (
@@ -135,7 +149,7 @@ export function ManageStockDialog({ cycle, allProducts, trigger }: ManageStockDi
                             </FormLabel>
                             <div className="flex-1">
                               <FormControl>
-                                <Input type="number" min="0" {...itemField} className="h-8 text-sm"/>
+                                <Input type="number" min="0" {...itemField} className="h-8 text-sm" disabled={isGuest}/>
                               </FormControl>
                               <FormMessage className="text-xs" />
                             </div>
@@ -152,7 +166,7 @@ export function ManageStockDialog({ cycle, allProducts, trigger }: ManageStockDi
                     Cancelar
                   </Button>
                 </DialogClose>
-                <Button type="submit" disabled={isSubmitting || allProducts.length === 0} className="bg-accent hover:bg-accent/90">
+                <Button type="submit" disabled={isSubmitting || allProducts.length === 0 || isGuest} className="bg-accent hover:bg-accent/90">
                   {isSubmitting ? 'Guardando...' : 'Guardar Cambios'}
                 </Button>
               </DialogFooter>

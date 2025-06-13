@@ -1,10 +1,9 @@
+
 import { AppLayout } from '@/components/layout/AppLayout';
-import { Button } from '@/components/ui/button';
-import { PlusCircle } from 'lucide-react';
 import { getProducts } from '@/lib/actions/productos.actions';
 import { ProductTable } from '@/components/productos/ProductTable';
-import { ProductDialog } from '@/components/productos/ProductDialog';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { AddProductButton } from './AddProductButtonClient';
 
 export default async function ProductosPage() {
   const products = await getProducts();
@@ -19,11 +18,7 @@ export default async function ProductosPage() {
               Añade, modifica o elimina productos del catálogo.
             </p>
           </div>
-          <ProductDialog trigger={
-            <Button>
-              <PlusCircle className="mr-2 h-4 w-4" /> Añadir Producto
-            </Button>
-          } />
+          <AddProductButton />
         </div>
         
         <Card>

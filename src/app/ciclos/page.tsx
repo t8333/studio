@@ -1,11 +1,10 @@
+
 import { AppLayout } from '@/components/layout/AppLayout';
-import { Button } from '@/components/ui/button';
-import { PlusCircle } from 'lucide-react';
 import { getCycles } from '@/lib/actions/ciclos.actions';
 import { getProducts } from '@/lib/actions/productos.actions';
 import { CycleTable } from '@/components/ciclos/CycleTable';
-import { CycleDialog } from '@/components/ciclos/CycleDialog';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { AddCycleButton } from './AddCycleButtonClient';
 
 export default async function CiclosPage() {
   const cycles = await getCycles();
@@ -21,11 +20,7 @@ export default async function CiclosPage() {
               Define ciclos de visita, gestiona el stock inicial de productos para cada uno.
             </p>
           </div>
-          <CycleDialog allProducts={products} trigger={
-            <Button>
-              <PlusCircle className="mr-2 h-4 w-4" /> Crear Nuevo Ciclo
-            </Button>
-          } />
+          <AddCycleButton allProducts={products} />
         </div>
         
         <Card>

@@ -1,3 +1,4 @@
+
 'use client';
 
 import type { Visit, Doctor, Cycle, Product } from '@/types';
@@ -25,6 +26,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { useAuth } from '@/context/AuthContext';
 
 interface VisitTableProps {
   visits: Visit[];
@@ -36,8 +38,14 @@ interface VisitTableProps {
 export function VisitTable({ visits, doctors, cycles, allProducts }: VisitTableProps) {
   const { toast } = useToast();
   const [isDeleting, setIsDeleting] = useState(false);
+  const { user } = useAuth();
+  const isGuest = user?.role === 'guest';
 
   const handleDelete = async (id: string) => {
+    if (isGuest) {
+      toast({ title: 'Acción no permitida', description: 'Los invitados no pueden eliminar visitas.', variant: 'destructive' });
+      return;
+    }
     setIsDeleting(true);
     try {
       await deleteVisit(id);
@@ -67,7 +75,7 @@ export function VisitTable({ visits, doctors, cycles, allProducts }: VisitTableP
               <TableHead>Ciclo</TableHead>
               <TableHead>Fecha</TableHead>
               <TableHead>Productos Entregados</TableHead>
-              <TableHead className="text-right w-[120px]">Acciones</TableHead>
+              {!isGuest && <TableHead className="text-right w-[120px]">Acciones</TableHead>}
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -98,32 +106,34 @@ export function VisitTable({ visits, doctors, cycles, allProducts }: VisitTableP
                     <Badge variant="outline">Ninguno</Badge>
                   )}
                 </TableCell>
-                <TableCell className="text-right">
-                  <div className="flex gap-2 justify-end">
-                    <VisitDialog
-                      visit={visit}
-                      doctors={doctors}
-                      cycles={cycles}
-                      allProducts={allProducts}
-                      trigger={
-                        <Button variant="ghost" size="icon" aria-label="Editar visita">
-                          <Edit className="h-4 w-4" />
-                        </Button>
-                      }
-                    />
-                    <DeleteDialog
-                      onConfirm={() => handleDelete(visit.id)}
-                      itemName={`visita del ${format(parseISO(visit.fecha), "P", { locale: es })} a ${getDoctorName(visit.medicoId)}`}
-                      itemType="visita"
-                      isDeleting={isDeleting}
-                      trigger={
-                        <Button variant="ghost" size="icon" aria-label="Eliminar visita" disabled={isDeleting}>
-                          <Trash2 className="h-4 w-4 text-destructive" />
-                        </Button>
-                      }
-                    />
-                  </div>
-                </TableCell>
+                {!isGuest && (
+                  <TableCell className="text-right">
+                    <div className="flex gap-2 justify-end">
+                      <VisitDialog
+                        visit={visit}
+                        doctors={doctors}
+                        cycles={cycles}
+                        allProducts={allProducts}
+                        trigger={
+                          <Button variant="ghost" size="icon" aria-label="Editar visita" disabled={isGuest}>
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                        }
+                      />
+                      <DeleteDialog
+                        onConfirm={() => handleDelete(visit.id)}
+                        itemName={`visita del ${format(parseISO(visit.fecha), "P", { locale: es })} a ${getDoctorName(visit.medicoId)}`}
+                        itemType="visita"
+                        isDeleting={isDeleting}
+                        trigger={
+                          <Button variant="ghost" size="icon" aria-label="Eliminar visita" disabled={isDeleting || isGuest}>
+                            <Trash2 className="h-4 w-4 text-destructive" />
+                          </Button>
+                        }
+                      />
+                    </div>
+                  </TableCell>
+                )}
               </TableRow>
             ))}
           </TableBody>

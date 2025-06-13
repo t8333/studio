@@ -1,3 +1,4 @@
+
 'use client';
 
 import type { Doctor } from '@/types';
@@ -16,6 +17,7 @@ import { DeleteDialog } from '@/components/shared/DeleteDialog';
 import { deleteDoctor } from '@/lib/actions/medicos.actions';
 import { useToast } from '@/hooks/use-toast';
 import { useState } from 'react';
+import { useAuth } from '@/context/AuthContext';
 
 interface DoctorTableProps {
   doctors: Doctor[];
@@ -24,8 +26,14 @@ interface DoctorTableProps {
 export function DoctorTable({ doctors }: DoctorTableProps) {
   const { toast } = useToast();
   const [isDeleting, setIsDeleting] = useState(false);
+  const { user } = useAuth();
+  const isGuest = user?.role === 'guest';
 
   const handleDelete = async (id: string) => {
+    if (isGuest) {
+      toast({ title: 'Acción no permitida', description: 'Los invitados no pueden eliminar médicos.', variant: 'destructive' });
+      return;
+    }
     setIsDeleting(true);
     try {
       await deleteDoctor(id);
@@ -50,7 +58,7 @@ export function DoctorTable({ doctors }: DoctorTableProps) {
             <TableHead>Especialidad</TableHead>
             <TableHead>Teléfono</TableHead>
             <TableHead>Email</TableHead>
-            <TableHead className="text-right w-[120px]">Acciones</TableHead>
+            {!isGuest && <TableHead className="text-right w-[120px]">Acciones</TableHead>}
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -60,29 +68,31 @@ export function DoctorTable({ doctors }: DoctorTableProps) {
               <TableCell>{doctor.especialidad}</TableCell>
               <TableCell>{doctor.telefono || '-'}</TableCell>
               <TableCell>{doctor.email || '-'}</TableCell>
-              <TableCell className="text-right">
-                <div className="flex gap-2 justify-end">
-                  <DoctorDialog
-                    doctor={doctor}
-                    trigger={
-                      <Button variant="ghost" size="icon" aria-label="Editar médico">
-                        <Edit className="h-4 w-4" />
-                      </Button>
-                    }
-                  />
-                  <DeleteDialog
-                    onConfirm={() => handleDelete(doctor.id)}
-                    itemName={doctor.nombre}
-                    itemType="médico"
-                    isDeleting={isDeleting}
-                    trigger={
-                      <Button variant="ghost" size="icon" aria-label="Eliminar médico" disabled={isDeleting}>
-                        <Trash2 className="h-4 w-4 text-destructive" />
-                      </Button>
-                    }
-                  />
-                </div>
-              </TableCell>
+              {!isGuest && (
+                <TableCell className="text-right">
+                  <div className="flex gap-2 justify-end">
+                    <DoctorDialog
+                      doctor={doctor}
+                      trigger={
+                        <Button variant="ghost" size="icon" aria-label="Editar médico" disabled={isGuest}>
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                      }
+                    />
+                    <DeleteDialog
+                      onConfirm={() => handleDelete(doctor.id)}
+                      itemName={doctor.nombre}
+                      itemType="médico"
+                      isDeleting={isDeleting}
+                      trigger={
+                        <Button variant="ghost" size="icon" aria-label="Eliminar médico" disabled={isDeleting || isGuest}>
+                          <Trash2 className="h-4 w-4 text-destructive" />
+                        </Button>
+                      }
+                    />
+                  </div>
+                </TableCell>
+              )}
             </TableRow>
           ))}
         </TableBody>

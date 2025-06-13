@@ -1,3 +1,4 @@
+
 'use server';
 
 import type { Doctor, OptionalId } from '@/types';
@@ -14,24 +15,27 @@ export async function getDoctorById(id: string): Promise<Doctor | undefined> {
 
 export async function saveDoctor(doctorData: OptionalId<Doctor>): Promise<Doctor> {
   if (doctorData.id) {
-    // Update
     const index = doctorsData.findIndex(d => d.id === doctorData.id);
     if (index === -1) throw new Error('Médico no encontrado');
-    // Solo se actualiza el nombre si es lo único que viene del form simplificado
-    // Si vienen más campos (ej. en un futuro si se edita desde otro lado), se actualizan también
-    doctorsData[index] = { ...doctorsData[index], ...doctorData } as Doctor;
+    doctorsData[index] = { 
+      ...doctorsData[index], // Preserve existing fields not in form
+      nombre: doctorData.nombre,
+      especialidad: doctorData.especialidad ?? doctorsData[index].especialidad,
+      telefono: doctorData.telefono ?? doctorsData[index].telefono,
+      email: doctorData.email ?? doctorsData[index].email,
+      intereses: doctorData.intereses ?? doctorsData[index].intereses,
+    } as Doctor;
     revalidatePath('/medicos');
     revalidatePath('/'); 
     return JSON.parse(JSON.stringify(doctorsData[index]));
   } else {
-    // Create
     const newDoctor: Doctor = {
       id: crypto.randomUUID(),
       nombre: doctorData.nombre,
-      especialidad: doctorData.especialidad || '', // Asegurar valor por defecto
-      telefono: doctorData.telefono || '', // Asegurar valor por defecto
-      email: doctorData.email || '', // Asegurar valor por defecto
-      intereses: doctorData.intereses || '', // Asegurar valor por defecto
+      especialidad: doctorData.especialidad || '',
+      telefono: doctorData.telefono || '',
+      email: doctorData.email || '',
+      intereses: doctorData.intereses || '',
     };
     doctorsData.push(newDoctor);
     revalidatePath('/medicos');

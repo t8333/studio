@@ -1,3 +1,4 @@
+
 'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -13,18 +14,18 @@ import {
   FormMessage,
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
-// import { Textarea } from '@/components/ui/textarea'; // No longer needed
 import { useToast } from '@/hooks/use-toast';
 import { saveDoctor } from '@/lib/actions/medicos.actions';
 import type { Doctor, OptionalId } from '@/types';
 import { useState, useEffect } from 'react';
+import { useAuth } from '@/context/AuthContext';
 
 const doctorFormSchema = z.object({
   nombre: z.string().min(2, { message: 'El nombre debe tener al menos 2 caracteres.' }).max(100),
-  // especialidad: z.string().min(2, { message: 'La especialidad debe tener al menos 2 caracteres.' }).max(100), // Eliminado
-  // telefono: z.string().max(20).optional().or(z.literal('')), // Eliminado
-  // email: z.string().email({ message: 'Email inválido.' }).max(100).optional().or(z.literal('')), // Eliminado
-  // intereses: z.string().max(500).optional().or(z.literal('')), // Eliminado
+  especialidad: z.string().max(100).optional().or(z.literal('')),
+  telefono: z.string().max(20).optional().or(z.literal('')),
+  email: z.string().email({ message: 'Email inválido.' }).max(100).optional().or(z.literal('')),
+  intereses: z.string().max(500).optional().or(z.literal('')),
 });
 
 type DoctorFormValues = z.infer<typeof doctorFormSchema>;
@@ -37,15 +38,17 @@ interface DoctorFormProps {
 export function DoctorForm({ doctor, onSuccess }: DoctorFormProps) {
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const { user } = useAuth();
+  const isGuest = user?.role === 'guest';
 
   const form = useForm<DoctorFormValues>({
     resolver: zodResolver(doctorFormSchema),
     defaultValues: {
       nombre: doctor?.nombre || '',
-      // especialidad: doctor?.especialidad || '', // Eliminado
-      // telefono: doctor?.telefono || '', // Eliminado
-      // email: doctor?.email || '', // Eliminado
-      // intereses: doctor?.intereses || '', // Eliminado
+      especialidad: doctor?.especialidad || '',
+      telefono: doctor?.telefono || '',
+      email: doctor?.email || '',
+      intereses: doctor?.intereses || '',
     },
   });
 
@@ -53,36 +56,33 @@ export function DoctorForm({ doctor, onSuccess }: DoctorFormProps) {
     if (doctor) {
       form.reset({
         nombre: doctor.nombre,
-        // especialidad: doctor.especialidad, // Eliminado
-        // telefono: doctor.telefono || '', // Eliminado
-        // email: doctor.email || '', // Eliminado
-        // intereses: doctor.intereses || '', // Eliminado
+        especialidad: doctor.especialidad || '',
+        telefono: doctor.telefono || '',
+        email: doctor.email || '',
+        intereses: doctor.intereses || '',
       });
     } else {
       form.reset({
         nombre: '',
+        especialidad: '',
+        telefono: '',
+        email: '',
+        intereses: '',
       });
     }
   }, [doctor, form]);
 
   async function onSubmit(data: DoctorFormValues) {
+    if (isGuest) {
+      toast({ title: 'Acción no permitida', description: 'Los invitados no pueden guardar cambios.', variant: 'destructive' });
+      return;
+    }
     setIsSubmitting(true);
     try {
       const doctorToSave: OptionalId<Doctor> = {
         id: doctor?.id,
-        nombre: data.nombre,
-        // Si se está creando, los campos opcionales se establecerán en la acción.
-        // Si se está editando, solo se actualiza el nombre.
+        ...data,
       };
-      if (!doctor?.id) {
-        // Valores por defecto para campos no presentes en el formulario al crear
-        doctorToSave.especialidad = '';
-        doctorToSave.telefono = '';
-        doctorToSave.email = '';
-        doctorToSave.intereses = '';
-      }
-
-
       await saveDoctor(doctorToSave);
       toast({
         title: 'Éxito',
@@ -111,14 +111,65 @@ export function DoctorForm({ doctor, onSuccess }: DoctorFormProps) {
             <FormItem>
               <FormLabel>Nombre Completo</FormLabel>
               <FormControl>
-                <Input placeholder="Ej: Dr. Juan Pérez" {...field} />
+                <Input placeholder="Ej: Dr. Juan Pérez" {...field} disabled={isGuest} />
               </FormControl>
               <FormMessage />
             </FormItem>
           )}
         />
-        {/* Campos eliminados: especialidad, telefono, email, intereses */}
-        <Button type="submit" disabled={isSubmitting} className="w-full bg-accent hover:bg-accent/90">
+         <FormField
+          control={form.control}
+          name="especialidad"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Especialidad (Opcional)</FormLabel>
+              <FormControl>
+                <Input placeholder="Ej: Cardiología" {...field} disabled={isGuest} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+         <FormField
+          control={form.control}
+          name="telefono"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Teléfono (Opcional)</FormLabel>
+              <FormControl>
+                <Input placeholder="Ej: +34 123 456 789" {...field} disabled={isGuest} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+         <FormField
+          control={form.control}
+          name="email"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Email (Opcional)</FormLabel>
+              <FormControl>
+                <Input type="email" placeholder="Ej: dr.perez@mail.com" {...field} disabled={isGuest} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={form.control}
+          name="intereses"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Intereses (Opcional, para IA)</FormLabel>
+              <FormControl>
+                <Input placeholder="Ej: Nuevas tecnologías en cardiología, estudios sobre diabetes tipo 2" {...field} disabled={isGuest} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+        <Button type="submit" disabled={isSubmitting || isGuest} className="w-full bg-accent hover:bg-accent/90">
           {isSubmitting ? 'Guardando...' : (doctor ? 'Actualizar Médico' : 'Guardar Médico')}
         </Button>
       </form>

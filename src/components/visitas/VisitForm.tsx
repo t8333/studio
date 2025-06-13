@@ -1,3 +1,4 @@
+
 'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -16,7 +17,7 @@ import {
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { CalendarIcon, ChevronsUpDown } from 'lucide-react';
+import { CalendarIcon } from 'lucide-react';
 import { Calendar } from '@/components/ui/calendar';
 import {
   Select,
@@ -30,9 +31,10 @@ import { format, parseISO } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { useToast } from '@/hooks/use-toast';
 import { saveVisit } from '@/lib/actions/visitas.actions';
-import type { Visit, OptionalId, Doctor, Cycle, Product, VisitProduct } from '@/types';
+import type { Visit, OptionalId, Doctor, Cycle, Product } from '@/types';
 import { useState, useEffect } from 'react';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { useAuth } from '@/context/AuthContext';
 
 const visitFormSchema = z.object({
   medicoId: z.string().min(1, { message: 'Debe seleccionar un médico.' }),
@@ -42,7 +44,7 @@ const visitFormSchema = z.object({
   productosEntregados: z.array(z.object({
     productoId: z.string(),
     cantidadEntregada: z.coerce.number().min(0, { message: 'La cantidad no puede ser negativa.' }),
-  })).min(0), // Allow no products to be selected initially
+  })).min(0),
 });
 
 type VisitFormValues = z.infer<typeof visitFormSchema>;
@@ -58,6 +60,8 @@ interface VisitFormProps {
 export function VisitForm({ visit, doctors, cycles, allProducts, onSuccess }: VisitFormProps) {
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const { user } = useAuth();
+  const isGuest = user?.role === 'guest';
 
   const form = useForm<VisitFormValues>({
     resolver: zodResolver(visitFormSchema),
@@ -113,8 +117,11 @@ export function VisitForm({ visit, doctors, cycles, allProducts, onSuccess }: Vi
   }, [visit, allProducts, form, replace]);
 
   async function onSubmit(data: VisitFormValues) {
+    if (isGuest) {
+      toast({ title: 'Acción no permitida', description: 'Los invitados no pueden guardar cambios.', variant: 'destructive' });
+      return;
+    }
     setIsSubmitting(true);
-    // Filter out products with 0 quantity before saving
     const productosFiltrados = data.productosEntregados.filter(p => p.cantidadEntregada > 0);
 
     try {
@@ -153,7 +160,7 @@ export function VisitForm({ visit, doctors, cycles, allProducts, onSuccess }: Vi
             render={({ field }) => (
               <FormItem>
                 <FormLabel>Médico</FormLabel>
-                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                <Select onValueChange={field.onChange} defaultValue={field.value} disabled={isGuest}>
                   <FormControl>
                     <SelectTrigger>
                       <SelectValue placeholder="Selecciona un médico" />
@@ -175,7 +182,7 @@ export function VisitForm({ visit, doctors, cycles, allProducts, onSuccess }: Vi
             render={({ field }) => (
               <FormItem>
                 <FormLabel>Ciclo</FormLabel>
-                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                <Select onValueChange={field.onChange} defaultValue={field.value} disabled={isGuest}>
                   <FormControl>
                     <SelectTrigger>
                       <SelectValue placeholder="Selecciona un ciclo" />
@@ -207,6 +214,7 @@ export function VisitForm({ visit, doctors, cycles, allProducts, onSuccess }: Vi
                           "w-full pl-3 text-left font-normal",
                           !field.value && "text-muted-foreground"
                         )}
+                        disabled={isGuest}
                       >
                         {field.value ? (
                           format(field.value, "PPP", { locale: es })
@@ -222,7 +230,7 @@ export function VisitForm({ visit, doctors, cycles, allProducts, onSuccess }: Vi
                       mode="single"
                       selected={field.value}
                       onSelect={field.onChange}
-                      disabled={(date) => date < new Date("1900-01-01")}
+                      disabled={(date) => date < new Date("1900-01-01") || isGuest}
                       initialFocus
                       locale={es}
                     />
@@ -239,7 +247,7 @@ export function VisitForm({ visit, doctors, cycles, allProducts, onSuccess }: Vi
             <FormItem>
               <FormLabel>Notas (Opcional)</FormLabel>
               <FormControl>
-                <Textarea placeholder="Ej: Conversación sobre el nuevo estudio, próxima cita tentativa..." {...field} />
+                <Textarea placeholder="Ej: Conversación sobre el nuevo estudio, próxima cita tentativa..." {...field} disabled={isGuest} />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -286,7 +294,7 @@ export function VisitForm({ visit, doctors, cycles, allProducts, onSuccess }: Vi
                             max={availableStock !== undefined ? String(availableStock) : undefined}
                             {...itemField} 
                             className="h-8 text-sm"
-                            disabled={!selectedCycleId}
+                            disabled={!selectedCycleId || isGuest}
                           />
                         </FormControl>
                         <FormMessage className="text-xs" />
@@ -300,7 +308,7 @@ export function VisitForm({ visit, doctors, cycles, allProducts, onSuccess }: Vi
           </ScrollArea>
         </div>
 
-        <Button type="submit" disabled={isSubmitting || !selectedCycleId} className="w-full bg-accent hover:bg-accent/90">
+        <Button type="submit" disabled={isSubmitting || !selectedCycleId || isGuest} className="w-full bg-accent hover:bg-accent/90">
           {isSubmitting ? 'Guardando...' : (visit ? 'Actualizar Visita' : 'Registrar Visita')}
         </Button>
         {!selectedCycleId && <p className="text-sm text-destructive text-center">Por favor, seleccione un ciclo para habilitar el registro de productos.</p>}

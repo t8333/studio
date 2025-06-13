@@ -24,11 +24,12 @@ import { format, parseISO } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { useToast } from '@/hooks/use-toast';
 import { saveCycle } from '@/lib/actions/ciclos.actions';
-import type { Cycle, OptionalId, Product, CycleProductStock } from '@/types';
+import type { Cycle, OptionalId, Product } from '@/types';
 import { useState, useEffect } from 'react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { PackageOpen } from 'lucide-react';
+import { useAuth } from '@/context/AuthContext';
 
 const cycleFormSchema = z.object({
   nombre: z.string().min(2, { message: 'El nombre debe tener al menos 2 caracteres.' }).max(100),
@@ -55,6 +56,8 @@ interface CycleFormProps {
 export function CycleForm({ cycle, allProducts, onSuccess }: CycleFormProps) {
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const { user } = useAuth();
+  const isGuest = user?.role === 'guest';
 
   const form = useForm<CycleFormValues>({
     resolver: zodResolver(cycleFormSchema),
@@ -77,7 +80,7 @@ export function CycleForm({ cycle, allProducts, onSuccess }: CycleFormProps) {
   useEffect(() => {
     let stockArrayForForm: { productoId: string; cantidad: number }[];
 
-    if (cycle) { // Editing existing cycle
+    if (cycle) { 
       const cycleStockMap = new Map((cycle.stockProductos || []).map(item => [item.productoId, item.cantidad]));
       stockArrayForForm = allProducts.map(p => ({
         productoId: p.id,
@@ -90,7 +93,7 @@ export function CycleForm({ cycle, allProducts, onSuccess }: CycleFormProps) {
         prioridadesMarketing: cycle.prioridadesMarketing || '',
         stockProductos: stockArrayForForm,
       });
-    } else { // Creating new cycle
+    } else { 
       stockArrayForForm = allProducts.map(p => ({
         productoId: p.id,
         cantidad: 0,
@@ -104,10 +107,14 @@ export function CycleForm({ cycle, allProducts, onSuccess }: CycleFormProps) {
       });
     }
     replace(stockArrayForForm);
-  }, [cycle, allProducts, form.reset, replace]);
+  }, [cycle, allProducts, form, replace]);
 
 
   async function onSubmit(data: CycleFormValues) {
+    if (isGuest) {
+      toast({ title: 'Acción no permitida', description: 'Los invitados no pueden guardar cambios.', variant: 'destructive' });
+      return;
+    }
     setIsSubmitting(true);
     try {
       const cycleToSave: OptionalId<Cycle> = {
@@ -145,7 +152,7 @@ export function CycleForm({ cycle, allProducts, onSuccess }: CycleFormProps) {
             <FormItem>
               <FormLabel>Nombre del Ciclo</FormLabel>
               <FormControl>
-                <Input placeholder="Ej: Ciclo Q1 2024" {...field} />
+                <Input placeholder="Ej: Ciclo Q1 2024" {...field} disabled={isGuest} />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -167,6 +174,7 @@ export function CycleForm({ cycle, allProducts, onSuccess }: CycleFormProps) {
                           "w-full pl-3 text-left font-normal",
                           !field.value && "text-muted-foreground"
                         )}
+                        disabled={isGuest}
                       >
                         {field.value ? (
                           format(field.value, "PPP", { locale: es })
@@ -182,7 +190,7 @@ export function CycleForm({ cycle, allProducts, onSuccess }: CycleFormProps) {
                       mode="single"
                       selected={field.value}
                       onSelect={field.onChange}
-                      disabled={(date) => date < new Date("1900-01-01")}
+                      disabled={(date) => date < new Date("1900-01-01") || isGuest}
                       initialFocus
                       locale={es}
                     />
@@ -207,6 +215,7 @@ export function CycleForm({ cycle, allProducts, onSuccess }: CycleFormProps) {
                           "w-full pl-3 text-left font-normal",
                           !field.value && "text-muted-foreground"
                         )}
+                        disabled={isGuest}
                       >
                         {field.value ? (
                           format(field.value, "PPP", { locale: es })
@@ -222,7 +231,7 @@ export function CycleForm({ cycle, allProducts, onSuccess }: CycleFormProps) {
                       mode="single"
                       selected={field.value}
                       onSelect={field.onChange}
-                      disabled={(date) => date < (form.getValues("fechaInicio") || new Date("1900-01-01"))}
+                      disabled={(date) => date < (form.getValues("fechaInicio") || new Date("1900-01-01")) || isGuest}
                       initialFocus
                       locale={es}
                     />
@@ -240,7 +249,7 @@ export function CycleForm({ cycle, allProducts, onSuccess }: CycleFormProps) {
             <FormItem>
               <FormLabel>Prioridades de Marketing (Opcional)</FormLabel>
               <FormControl>
-                <Textarea placeholder="Ej: Enfocarse en productos cardiovasculares, lanzamiento de nuevo analgésico." {...field} />
+                <Textarea placeholder="Ej: Enfocarse en productos cardiovasculares, lanzamiento de nuevo analgésico." {...field} disabled={isGuest} />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -275,7 +284,7 @@ export function CycleForm({ cycle, allProducts, onSuccess }: CycleFormProps) {
                         </FormLabel>
                         <div className="flex-1">
                           <FormControl>
-                            <Input type="number" min="0" {...itemField} className="h-8 text-sm"/>
+                            <Input type="number" min="0" {...itemField} className="h-8 text-sm" disabled={isGuest}/>
                           </FormControl>
                           <FormMessage className="text-xs" />
                         </div>
@@ -289,7 +298,7 @@ export function CycleForm({ cycle, allProducts, onSuccess }: CycleFormProps) {
           )}
         </div>
 
-        <Button type="submit" disabled={isSubmitting} className="w-full bg-accent hover:bg-accent/90">
+        <Button type="submit" disabled={isSubmitting || isGuest} className="w-full bg-accent hover:bg-accent/90">
           {isSubmitting ? 'Guardando...' : (cycle ? 'Actualizar Ciclo' : 'Crear Ciclo')}
         </Button>
       </form>

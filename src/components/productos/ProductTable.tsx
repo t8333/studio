@@ -1,3 +1,4 @@
+
 'use client';
 
 import type { Product } from '@/types';
@@ -16,6 +17,7 @@ import { DeleteDialog } from '@/components/shared/DeleteDialog';
 import { deleteProduct } from '@/lib/actions/productos.actions';
 import { useToast } from '@/hooks/use-toast';
 import { useState } from 'react';
+import { useAuth } from '@/context/AuthContext';
 
 interface ProductTableProps {
   products: Product[];
@@ -24,8 +26,14 @@ interface ProductTableProps {
 export function ProductTable({ products }: ProductTableProps) {
   const { toast } = useToast();
   const [isDeleting, setIsDeleting] = useState(false);
+  const { user } = useAuth();
+  const isGuest = user?.role === 'guest';
 
   const handleDelete = async (id: string) => {
+    if (isGuest) {
+      toast({ title: 'Acción no permitida', description: 'Los invitados no pueden eliminar productos.', variant: 'destructive' });
+      return;
+    }
     setIsDeleting(true);
     try {
       await deleteProduct(id);
@@ -49,7 +57,7 @@ export function ProductTable({ products }: ProductTableProps) {
             <TableHead>Nombre</TableHead>
             <TableHead>Descripción</TableHead>
             <TableHead>Identificador</TableHead>
-            <TableHead className="text-right w-[120px]">Acciones</TableHead>
+            {!isGuest && <TableHead className="text-right w-[120px]">Acciones</TableHead>}
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -58,29 +66,31 @@ export function ProductTable({ products }: ProductTableProps) {
               <TableCell className="font-medium">{product.nombre}</TableCell>
               <TableCell className="max-w-xs truncate">{product.descripcion}</TableCell>
               <TableCell>{product.identificadorUnico}</TableCell>
-              <TableCell className="text-right">
-                <div className="flex gap-2 justify-end">
-                  <ProductDialog
-                    product={product}
-                    trigger={
-                      <Button variant="ghost" size="icon" aria-label="Editar producto">
-                        <Edit className="h-4 w-4" />
-                      </Button>
-                    }
-                  />
-                  <DeleteDialog
-                    onConfirm={() => handleDelete(product.id)}
-                    itemName={product.nombre}
-                    itemType="producto"
-                    isDeleting={isDeleting}
-                    trigger={
-                      <Button variant="ghost" size="icon" aria-label="Eliminar producto" disabled={isDeleting}>
-                        <Trash2 className="h-4 w-4 text-destructive" />
-                      </Button>
-                    }
-                  />
-                </div>
-              </TableCell>
+              {!isGuest && (
+                <TableCell className="text-right">
+                  <div className="flex gap-2 justify-end">
+                    <ProductDialog
+                      product={product}
+                      trigger={
+                        <Button variant="ghost" size="icon" aria-label="Editar producto" disabled={isGuest}>
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                      }
+                    />
+                    <DeleteDialog
+                      onConfirm={() => handleDelete(product.id)}
+                      itemName={product.nombre}
+                      itemType="producto"
+                      isDeleting={isDeleting}
+                      trigger={
+                        <Button variant="ghost" size="icon" aria-label="Eliminar producto" disabled={isDeleting || isGuest}>
+                          <Trash2 className="h-4 w-4 text-destructive" />
+                        </Button>
+                      }
+                    />
+                  </div>
+                </TableCell>
+              )}
             </TableRow>
           ))}
         </TableBody>

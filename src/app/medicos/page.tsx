@@ -1,10 +1,9 @@
+
 import { AppLayout } from '@/components/layout/AppLayout';
-import { Button } from '@/components/ui/button';
-import { PlusCircle } from 'lucide-react';
 import { getDoctors } from '@/lib/actions/medicos.actions';
 import { DoctorTable } from '@/components/medicos/DoctorTable';
-import { DoctorDialog } from '@/components/medicos/DoctorDialog';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { AddDoctorButton } from './AddDoctorButtonClient';
 
 export default async function MedicosPage() {
   const doctors = await getDoctors();
@@ -19,11 +18,7 @@ export default async function MedicosPage() {
               Añade, modifica o elimina información de los médicos.
             </p>
           </div>
-          <DoctorDialog trigger={
-            <Button>
-              <PlusCircle className="mr-2 h-4 w-4" /> Añadir Médico
-            </Button>
-          } />
+          <AddDoctorButton />
         </div>
         
         <Card>
@@ -44,4 +39,4 @@ export default async function MedicosPage() {
   );
 }
 
-export const dynamic = 'force-dynamic'; // Ensures data is fetched on each request
+export const dynamic = 'force-dynamic';

@@ -1,17 +1,18 @@
+
 export interface Doctor {
   id: string;
   nombre: string;
-  especialidad?: string;
-  telefono?: string;
-  email?: string;
-  intereses?: string; // For GenAI suggestions
+  especialidad: string; // Ya no es opcional en el tipo base, pero sí en el form.
+  telefono: string;
+  email: string;
+  intereses: string; 
 }
 
 export interface Product {
   id: string;
   nombre: string;
-  descripcion?: string; // Hecho opcional
-  identificadorUnico?: string; // Hecho opcional
+  descripcion: string; 
+  identificadorUnico: string; 
 }
 
 export interface CycleProductStock {
@@ -42,6 +43,4 @@ export interface Visit {
   notas?: string;
 }
 
-// Helper type for forms
 export type OptionalId<T extends { id: string }> = Omit<T, 'id'> & { id?: string };
-

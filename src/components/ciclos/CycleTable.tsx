@@ -1,3 +1,4 @@
+
 'use client';
 
 import type { Cycle, Product } from '@/types';
@@ -19,6 +20,7 @@ import { useToast } from '@/hooks/use-toast';
 import { format, parseISO } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { useState } from 'react';
+import { useAuth } from '@/context/AuthContext';
 
 interface CycleTableProps {
   cycles: Cycle[];
@@ -28,8 +30,14 @@ interface CycleTableProps {
 export function CycleTable({ cycles, allProducts }: CycleTableProps) {
   const { toast } = useToast();
   const [isDeleting, setIsDeleting] = useState(false);
+  const { user } = useAuth();
+  const isGuest = user?.role === 'guest';
 
   const handleDelete = async (id: string) => {
+     if (isGuest) {
+      toast({ title: 'Acción no permitida', description: 'Los invitados no pueden eliminar ciclos.', variant: 'destructive' });
+      return;
+    }
     setIsDeleting(true);
     try {
       await deleteCycle(id);
@@ -53,7 +61,7 @@ export function CycleTable({ cycles, allProducts }: CycleTableProps) {
             <TableHead>Nombre</TableHead>
             <TableHead>Fecha Inicio</TableHead>
             <TableHead>Fecha Fin</TableHead>
-            <TableHead className="text-right w-[180px]">Acciones</TableHead>
+            {!isGuest && <TableHead className="text-right w-[180px]">Acciones</TableHead>}
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -62,39 +70,41 @@ export function CycleTable({ cycles, allProducts }: CycleTableProps) {
               <TableCell className="font-medium">{cycle.nombre}</TableCell>
               <TableCell>{format(parseISO(cycle.fechaInicio), "PPP", { locale: es })}</TableCell>
               <TableCell>{format(parseISO(cycle.fechaFin), "PPP", { locale: es })}</TableCell>
-              <TableCell className="text-right">
-                <div className="flex gap-1 justify-end">
-                  <ManageStockDialog
-                    cycle={cycle}
-                    allProducts={allProducts}
-                    trigger={
-                       <Button variant="ghost" size="icon" aria-label="Gestionar stock">
-                        <Boxes className="h-4 w-4 text-primary" />
-                      </Button>
-                    }
-                  />
-                  <CycleDialog
-                    cycle={cycle}
-                    allProducts={allProducts}
-                    trigger={
-                      <Button variant="ghost" size="icon" aria-label="Editar ciclo">
-                        <Edit className="h-4 w-4" />
-                      </Button>
-                    }
-                  />
-                  <DeleteDialog
-                    onConfirm={() => handleDelete(cycle.id)}
-                    itemName={cycle.nombre}
-                    itemType="ciclo"
-                    isDeleting={isDeleting}
-                    trigger={
-                      <Button variant="ghost" size="icon" aria-label="Eliminar ciclo" disabled={isDeleting}>
-                        <Trash2 className="h-4 w-4 text-destructive" />
-                      </Button>
-                    }
-                  />
-                </div>
-              </TableCell>
+              {!isGuest && (
+                <TableCell className="text-right">
+                  <div className="flex gap-1 justify-end">
+                    <ManageStockDialog
+                      cycle={cycle}
+                      allProducts={allProducts}
+                      trigger={
+                         <Button variant="ghost" size="icon" aria-label="Gestionar stock" disabled={isGuest}>
+                          <Boxes className="h-4 w-4 text-primary" />
+                        </Button>
+                      }
+                    />
+                    <CycleDialog
+                      cycle={cycle}
+                      allProducts={allProducts}
+                      trigger={
+                        <Button variant="ghost" size="icon" aria-label="Editar ciclo" disabled={isGuest}>
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                      }
+                    />
+                    <DeleteDialog
+                      onConfirm={() => handleDelete(cycle.id)}
+                      itemName={cycle.nombre}
+                      itemType="ciclo"
+                      isDeleting={isDeleting}
+                      trigger={
+                        <Button variant="ghost" size="icon" aria-label="Eliminar ciclo" disabled={isDeleting || isGuest}>
+                          <Trash2 className="h-4 w-4 text-destructive" />
+                        </Button>
+                      }
+                    />
+                  </div>
+                </TableCell>
+              )}
             </TableRow>
           ))}
         </TableBody>

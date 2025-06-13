@@ -1,3 +1,4 @@
+
 'use client';
 
 import {
@@ -12,6 +13,9 @@ import {
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
 import { Button } from '@/components/ui/button';
+import { useAuth } from '@/context/AuthContext';
+import { useToast } from '@/hooks/use-toast';
+
 
 interface DeleteDialogProps {
   trigger: React.ReactNode;
@@ -22,6 +26,27 @@ interface DeleteDialogProps {
 }
 
 export function DeleteDialog({ trigger, onConfirm, itemName, itemType, isDeleting = false }: DeleteDialogProps) {
+  const { user } = useAuth();
+  const isGuest = user?.role === 'guest';
+  const { toast } = useToast();
+
+  const handleConfirm = async (e: React.MouseEvent<HTMLButtonElement, MouseEvent>) => {
+    e.preventDefault(); 
+    if (isGuest) {
+      toast({ title: 'Acción no permitida', description: `Los invitados no pueden eliminar ${itemType}s.`, variant: 'destructive' });
+      return;
+    }
+    await onConfirm();
+  };
+  
+  if (isGuest) {
+     return (
+      <Button variant="ghost" size="icon" aria-label={`Eliminar ${itemType}`} disabled>
+        {trigger}
+      </Button>
+    );
+  }
+
   return (
     <AlertDialog>
       <AlertDialogTrigger asChild>{trigger}</AlertDialogTrigger>
@@ -35,11 +60,8 @@ export function DeleteDialog({ trigger, onConfirm, itemName, itemType, isDeletin
         <AlertDialogFooter>
           <AlertDialogCancel disabled={isDeleting}>Cancelar</AlertDialogCancel>
           <AlertDialogAction
-            onClick={async (e) => {
-              e.preventDefault(); // Prevent dialog closing if onConfirm is async and errors
-              await onConfirm();
-            }}
-            disabled={isDeleting}
+            onClick={handleConfirm}
+            disabled={isDeleting || isGuest}
             className="bg-destructive hover:bg-destructive/90 text-destructive-foreground"
           >
             {isDeleting ? 'Eliminando...' : 'Sí, eliminar'}
