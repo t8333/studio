@@ -19,6 +19,7 @@ export async function saveProduct(productData: OptionalId<Product>): Promise<Pro
     if (index === -1) throw new Error('Producto no encontrado');
     productsData[index] = { ...productsData[index], ...productData } as Product;
     revalidatePath('/productos');
+    revalidatePath('/'); // Revalidate dashboard
     return JSON.parse(JSON.stringify(productsData[index]));
   } else {
     // Create
@@ -36,8 +37,9 @@ export async function saveProduct(productData: OptionalId<Product>): Promise<Pro
     });
     
     revalidatePath('/productos');
-    revalidatePath('/ciclos'); // because cycles stock structure might change
+    revalidatePath('/ciclos'); 
     revalidatePath('/stock');
+    revalidatePath('/'); // Revalidate dashboard
     return JSON.parse(JSON.stringify(newProduct));
   }
 }
@@ -45,15 +47,6 @@ export async function saveProduct(productData: OptionalId<Product>): Promise<Pro
 export async function deleteProduct(id: string): Promise<void> {
   const index = productsData.findIndex(p => p.id === id);
   if (index === -1) throw new Error('Producto no encontrado');
-
-  // Check if product is in any cycle's stock or visits - for now, allow deletion
-  // For a real app, you'd prevent deletion or handle cascading effects
-  // const inCycleStock = cyclesData.some(c => c.stockProductos.some(sp => sp.productoId === id && sp.cantidad > 0));
-  // const inVisits = visitsData.some(v => v.productosEntregados.some(vp => vp.productoId === id && vp.cantidadEntregada > 0));
-  // if (inCycleStock || inVisits) {
-  //   throw new Error('No se puede eliminar el producto porque está en uso en ciclos o visitas.');
-  // }
-
 
   productsData.splice(index, 1);
   // Also remove from all cycle stocks
@@ -65,4 +58,5 @@ export async function deleteProduct(id: string): Promise<void> {
   revalidatePath('/ciclos');
   revalidatePath('/visitas');
   revalidatePath('/stock');
+  revalidatePath('/'); // Revalidate dashboard
 }

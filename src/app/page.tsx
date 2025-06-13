@@ -60,29 +60,10 @@ export default async function DashboardPage() {
           </Card>
         </div>
         
-        <div className="mt-6 p-6 bg-card rounded-lg shadow-sm">
-            <h2 className="text-2xl font-semibold text-foreground mb-4 font-headline">Novedades y Consejos</h2>
-            <div className="grid md:grid-cols-2 gap-6">
-                <div className="flex items-start gap-4">
-                    <Image src="https://placehold.co/150x100.png" alt="Consejo 1" width={150} height={100} className="rounded-md object-cover" data-ai-hint="medical team discussion" />
-                    <div>
-                        <h3 className="font-semibold text-primary">Optimiza tu Ruta de Visitas</h3>
-                        <p className="text-sm text-muted-foreground mt-1">Usa la función de planificación para organizar tus visitas de manera eficiente y ahorrar tiempo.</p>
-                    </div>
-                </div>
-                <div className="flex items-start gap-4">
-                     <Image src="https://placehold.co/150x100.png" alt="Consejo 2" width={150} height={100} className="rounded-md object-cover" data-ai-hint="pharmaceutical products" />
-                    <div>
-                        <h3 className="font-semibold text-primary">Mantén tu Stock al Día</h3>
-                        <p className="text-sm text-muted-foreground mt-1">Revisa regularmente la sección de stock para asegurar la disponibilidad de productos clave.</p>
-                    </div>
-                </div>
-            </div>
-        </div>
-
       </div>
     </AppLayout>
   );
 }
 
 export const dynamic = 'force-dynamic'; // Ensures data is fetched on each request
+

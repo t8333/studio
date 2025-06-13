@@ -46,6 +46,7 @@ export async function saveVisit(visitData: OptionalId<Visit>): Promise<Visit> {
     visitsData[index] = { ...originalVisit, ...visitData } as Visit;
     revalidatePath('/visitas');
     revalidatePath('/stock');
+    revalidatePath('/'); // Revalidate dashboard
     return JSON.parse(JSON.stringify(visitsData[index]));
 
   } else {
@@ -65,6 +66,7 @@ export async function saveVisit(visitData: OptionalId<Visit>): Promise<Visit> {
     visitsData.push(newVisit);
     revalidatePath('/visitas');
     revalidatePath('/stock');
+    revalidatePath('/'); // Revalidate dashboard
     return JSON.parse(JSON.stringify(newVisit));
   }
 }
@@ -83,4 +85,5 @@ export async function deleteVisit(id: string): Promise<void> {
   visitsData.splice(index, 1);
   revalidatePath('/visitas');
   revalidatePath('/stock');
+  revalidatePath('/'); // Revalidate dashboard
 }

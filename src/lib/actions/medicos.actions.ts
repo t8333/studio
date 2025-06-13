@@ -19,6 +19,7 @@ export async function saveDoctor(doctorData: OptionalId<Doctor>): Promise<Doctor
     if (index === -1) throw new Error('Médico no encontrado');
     doctorsData[index] = { ...doctorsData[index], ...doctorData } as Doctor;
     revalidatePath('/medicos');
+    revalidatePath('/'); // Revalidate dashboard
     return JSON.parse(JSON.stringify(doctorsData[index]));
   } else {
     // Create
@@ -28,6 +29,7 @@ export async function saveDoctor(doctorData: OptionalId<Doctor>): Promise<Doctor
     } as Doctor;
     doctorsData.push(newDoctor);
     revalidatePath('/medicos');
+    revalidatePath('/'); // Revalidate dashboard
     return JSON.parse(JSON.stringify(newDoctor));
   }
 }
@@ -44,4 +46,5 @@ export async function deleteDoctor(id: string): Promise<void> {
 
   doctorsData.splice(index, 1);
   revalidatePath('/medicos');
+  revalidatePath('/'); // Revalidate dashboard
 }

@@ -38,6 +38,7 @@ export async function saveCycle(cycleData: OptionalId<Cycle>): Promise<Cycle> {
     } as Cycle;
     revalidatePath('/ciclos');
     revalidatePath('/stock');
+    revalidatePath('/'); // Revalidate dashboard
     return JSON.parse(JSON.stringify(cyclesData[index]));
   } else {
     // Create
@@ -57,6 +58,7 @@ export async function saveCycle(cycleData: OptionalId<Cycle>): Promise<Cycle> {
     cyclesData.push(newCycle);
     revalidatePath('/ciclos');
     revalidatePath('/stock');
+    revalidatePath('/'); // Revalidate dashboard
     return JSON.parse(JSON.stringify(newCycle));
   }
 }
@@ -64,14 +66,7 @@ export async function saveCycle(cycleData: OptionalId<Cycle>): Promise<Cycle> {
 export async function deleteCycle(id: string): Promise<void> {
   const index = cyclesData.findIndex(c => c.id === id);
   if (index === -1) throw new Error('Ciclo no encontrado');
-
-  // Check for related visits - for now, allow deletion
-  // const relatedVisits = visitsData.filter(v => v.cicloId === id);
-  // if (relatedVisits.length > 0) {
-  //   throw new Error('No se puede eliminar el ciclo porque tiene visitas asociadas. Elimine primero las visitas.');
-  // }
   
-  // For simplicity, we'll delete associated visits if any. In real app, this might be restricted.
   const visitsToRemove = visitsData.filter(v => v.cicloId === id);
   visitsToRemove.forEach(v => {
     const visitIndex = visitsData.findIndex(visit => visit.id === v.id);
@@ -81,8 +76,9 @@ export async function deleteCycle(id: string): Promise<void> {
 
   cyclesData.splice(index, 1);
   revalidatePath('/ciclos');
-  revalidatePath('/visitas'); // As visits might be deleted
+  revalidatePath('/visitas'); 
   revalidatePath('/stock');
+  revalidatePath('/'); // Revalidate dashboard
 }
 
 export async function adjustStockInCycle(cycleId: string, productId: string, changeAmount: number): Promise<void> {
@@ -99,7 +95,8 @@ export async function adjustStockInCycle(cycleId: string, productId: string, cha
   
   revalidatePath(`/ciclos`);
   revalidatePath(`/stock`);
-  revalidatePath(`/visitas`); // Visits might depend on stock availability
+  revalidatePath(`/visitas`); 
+  revalidatePath('/'); // Revalidate dashboard
 }
 
 export async function updateCycleStock(cycleId: string, updatedStock: CycleProductStock[]): Promise<void> {
@@ -117,8 +114,9 @@ export async function updateCycleStock(cycleId: string, updatedStock: CycleProdu
     }
   }
   
-  cycle.stockProductos = updatedStock.map(s => ({...s})); // Ensure new array/objects for reactivity if needed
+  cycle.stockProductos = updatedStock.map(s => ({...s})); 
 
   revalidatePath(`/ciclos`);
   revalidatePath(`/stock`);
+  revalidatePath('/'); // Revalidate dashboard
 }
