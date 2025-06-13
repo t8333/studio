@@ -71,10 +71,11 @@ export function ManageStockDialog({ cycle, allProducts, trigger }: ManageStockDi
         productoId: product.id,
         cantidad: currentStockMap.get(product.id) || 0,
       }));
-      replace(fullStockArray); 
+      // form.reset must be called before replace to ensure defaultValues are correctly set for react-hook-form
       form.reset({ stockProductos: fullStockArray }); 
+      replace(fullStockArray); 
     }
-  }, [open, cycle, allProducts, form, replace]);
+  }, [open, cycle, allProducts, form.reset, replace]);
 
 
   async function onSubmit(data: ManageStockFormValues) {

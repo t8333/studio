@@ -63,7 +63,7 @@ export function CycleForm({ cycle, allProducts, onSuccess }: CycleFormProps) {
       fechaInicio: cycle?.fechaInicio ? parseISO(cycle.fechaInicio) : new Date(),
       fechaFin: cycle?.fechaFin ? parseISO(cycle.fechaFin) : new Date(),
       prioridadesMarketing: cycle?.prioridadesMarketing || '',
-      stockProductos: cycle?.stockProductos 
+      stockProductos: cycle?.stockProductos
         ? cycle.stockProductos.map(sp => ({ productoId: sp.productoId, cantidad: sp.cantidad }))
         : allProducts.map(p => ({ productoId: p.id, cantidad: 0 })),
     },
@@ -75,37 +75,36 @@ export function CycleForm({ cycle, allProducts, onSuccess }: CycleFormProps) {
   });
 
   useEffect(() => {
-    const initialStock = cycle?.stockProductos 
-      ? cycle.stockProductos.map(sp => ({ productoId: sp.productoId, cantidad: sp.cantidad }))
-      : allProducts.map(p => ({ productoId: p.id, cantidad: 0 }));
+    let stockArrayForForm: { productoId: string; cantidad: number }[];
 
-    const stockMap = new Map(initialStock.map(item => [item.productoId, item.cantidad]));
-    const fullStockArray = allProducts.map(p => ({
-      productoId: p.id,
-      cantidad: stockMap.get(p.id) || 0,
-    }));
-    
-    replace(fullStockArray);
-
-    if (cycle) {
+    if (cycle) { // Editing existing cycle
+      const cycleStockMap = new Map((cycle.stockProductos || []).map(item => [item.productoId, item.cantidad]));
+      stockArrayForForm = allProducts.map(p => ({
+        productoId: p.id,
+        cantidad: cycleStockMap.get(p.id) || 0,
+      }));
       form.reset({
         nombre: cycle.nombre,
         fechaInicio: parseISO(cycle.fechaInicio),
         fechaFin: parseISO(cycle.fechaFin),
         prioridadesMarketing: cycle.prioridadesMarketing || '',
-        stockProductos: fullStockArray,
+        stockProductos: stockArrayForForm,
       });
-    } else {
-       form.reset({
+    } else { // Creating new cycle
+      stockArrayForForm = allProducts.map(p => ({
+        productoId: p.id,
+        cantidad: 0,
+      }));
+      form.reset({ 
         nombre: '',
         fechaInicio: new Date(),
         fechaFin: new Date(),
         prioridadesMarketing: '',
-        stockProductos: allProducts.map(p => ({ productoId: p.id, cantidad: 0 }))
+        stockProductos: stockArrayForForm,
       });
     }
-
-  }, [cycle, allProducts, form, replace]);
+    replace(stockArrayForForm);
+  }, [cycle, allProducts, form.reset, replace]);
 
 
   async function onSubmit(data: CycleFormValues) {
