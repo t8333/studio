@@ -17,16 +17,26 @@ export async function saveProduct(productData: OptionalId<Product>): Promise<Pro
     // Update
     const index = productsData.findIndex(p => p.id === productData.id);
     if (index === -1) throw new Error('Producto no encontrado');
-    productsData[index] = { ...productsData[index], ...productData } as Product;
+    // Preserve existing description and identifier if not provided in productData (e.g. from simplified form)
+    productsData[index] = { 
+      ...productsData[index], 
+      nombre: productData.nombre,
+      // If productData comes from a full form, these would be updated.
+      // If from simplified form, they are undefined, so existing values are kept.
+      descripcion: productData.descripcion !== undefined ? productData.descripcion : productsData[index].descripcion,
+      identificadorUnico: productData.identificadorUnico !== undefined ? productData.identificadorUnico : productsData[index].identificadorUnico,
+    } as Product;
     revalidatePath('/productos');
     revalidatePath('/'); // Revalidate dashboard
     return JSON.parse(JSON.stringify(productsData[index]));
   } else {
     // Create
     const newProduct: Product = {
-      ...productData,
       id: crypto.randomUUID(),
-    } as Product;
+      nombre: productData.nombre,
+      descripcion: productData.descripcion || '', // Default to empty string if not provided
+      identificadorUnico: productData.identificadorUnico || '', // Default to empty string if not provided
+    };
     productsData.push(newProduct);
 
     // Add this new product to all existing cycles with 0 stock

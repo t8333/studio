@@ -1,7 +1,7 @@
 export interface Doctor {
   id: string;
   nombre: string;
-  especialidad?: string; // Hecho opcional
+  especialidad?: string;
   telefono?: string;
   email?: string;
   intereses?: string; // For GenAI suggestions
@@ -10,8 +10,8 @@ export interface Doctor {
 export interface Product {
   id: string;
   nombre: string;
-  descripcion: string;
-  identificadorUnico: string;
+  descripcion?: string; // Hecho opcional
+  identificadorUnico?: string; // Hecho opcional
 }
 
 export interface CycleProductStock {
@@ -44,3 +44,4 @@ export interface Visit {
 
 // Helper type for forms
 export type OptionalId<T extends { id: string }> = Omit<T, 'id'> & { id?: string };
+
