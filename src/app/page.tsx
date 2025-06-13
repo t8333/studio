@@ -1,7 +1,7 @@
 
 import { AppLayout } from '@/components/layout/AppLayout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Boxes, LineChart, Package, UsersRound } from 'lucide-react';
+import { Boxes, Package, UsersRound } from 'lucide-react';
 import Image from 'next/image';
 import { getDoctors } from '@/lib/actions/medicos.actions';
 import { getProducts } from '@/lib/actions/productos.actions';
@@ -59,20 +59,6 @@ export default async function DashboardPage() {
             </CardContent>
           </Card>
         </div>
-
-        <Card className="mt-6">
-          <CardHeader>
-            <CardTitle className="font-headline">Visualiza tu Progreso</CardTitle>
-            <CardDescription>Un vistazo rápido al rendimiento y actividad.</CardDescription>
-          </CardHeader>
-          <CardContent className="pl-2">
-            {/* Placeholder for a chart or more detailed stats */}
-            <div className="h-[350px] w-full bg-muted rounded-lg flex items-center justify-center">
-              <LineChart className="h-16 w-16 text-muted-foreground" />
-               <p className="ml-4 text-muted-foreground">Gráfica de actividad próximamente</p>
-            </div>
-          </CardContent>
-        </Card>
         
         <div className="mt-6 p-6 bg-card rounded-lg shadow-sm">
             <h2 className="text-2xl font-semibold text-foreground mb-4 font-headline">Novedades y Consejos</h2>
