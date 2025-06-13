@@ -13,7 +13,7 @@ import {
   FormMessage,
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
+// import { Textarea } from '@/components/ui/textarea'; // No longer needed
 import { useToast } from '@/hooks/use-toast';
 import { saveDoctor } from '@/lib/actions/medicos.actions';
 import type { Doctor, OptionalId } from '@/types';
@@ -21,10 +21,10 @@ import { useState, useEffect } from 'react';
 
 const doctorFormSchema = z.object({
   nombre: z.string().min(2, { message: 'El nombre debe tener al menos 2 caracteres.' }).max(100),
-  especialidad: z.string().min(2, { message: 'La especialidad debe tener al menos 2 caracteres.' }).max(100),
-  telefono: z.string().max(20).optional().or(z.literal('')),
-  email: z.string().email({ message: 'Email inválido.' }).max(100).optional().or(z.literal('')),
-  intereses: z.string().max(500).optional().or(z.literal('')),
+  // especialidad: z.string().min(2, { message: 'La especialidad debe tener al menos 2 caracteres.' }).max(100), // Eliminado
+  // telefono: z.string().max(20).optional().or(z.literal('')), // Eliminado
+  // email: z.string().email({ message: 'Email inválido.' }).max(100).optional().or(z.literal('')), // Eliminado
+  // intereses: z.string().max(500).optional().or(z.literal('')), // Eliminado
 });
 
 type DoctorFormValues = z.infer<typeof doctorFormSchema>;
@@ -42,10 +42,10 @@ export function DoctorForm({ doctor, onSuccess }: DoctorFormProps) {
     resolver: zodResolver(doctorFormSchema),
     defaultValues: {
       nombre: doctor?.nombre || '',
-      especialidad: doctor?.especialidad || '',
-      telefono: doctor?.telefono || '',
-      email: doctor?.email || '',
-      intereses: doctor?.intereses || '',
+      // especialidad: doctor?.especialidad || '', // Eliminado
+      // telefono: doctor?.telefono || '', // Eliminado
+      // email: doctor?.email || '', // Eliminado
+      // intereses: doctor?.intereses || '', // Eliminado
     },
   });
 
@@ -53,10 +53,14 @@ export function DoctorForm({ doctor, onSuccess }: DoctorFormProps) {
     if (doctor) {
       form.reset({
         nombre: doctor.nombre,
-        especialidad: doctor.especialidad,
-        telefono: doctor.telefono || '',
-        email: doctor.email || '',
-        intereses: doctor.intereses || '',
+        // especialidad: doctor.especialidad, // Eliminado
+        // telefono: doctor.telefono || '', // Eliminado
+        // email: doctor.email || '', // Eliminado
+        // intereses: doctor.intereses || '', // Eliminado
+      });
+    } else {
+      form.reset({
+        nombre: '',
       });
     }
   }, [doctor, form]);
@@ -65,9 +69,20 @@ export function DoctorForm({ doctor, onSuccess }: DoctorFormProps) {
     setIsSubmitting(true);
     try {
       const doctorToSave: OptionalId<Doctor> = {
-        ...data,
         id: doctor?.id,
+        nombre: data.nombre,
+        // Si se está creando, los campos opcionales se establecerán en la acción.
+        // Si se está editando, solo se actualiza el nombre.
       };
+      if (!doctor?.id) {
+        // Valores por defecto para campos no presentes en el formulario al crear
+        doctorToSave.especialidad = '';
+        doctorToSave.telefono = '';
+        doctorToSave.email = '';
+        doctorToSave.intereses = '';
+      }
+
+
       await saveDoctor(doctorToSave);
       toast({
         title: 'Éxito',
@@ -102,58 +117,7 @@ export function DoctorForm({ doctor, onSuccess }: DoctorFormProps) {
             </FormItem>
           )}
         />
-        <FormField
-          control={form.control}
-          name="especialidad"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Especialidad</FormLabel>
-              <FormControl>
-                <Input placeholder="Ej: Cardiología" {...field} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-        <FormField
-          control={form.control}
-          name="telefono"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Teléfono (Opcional)</FormLabel>
-              <FormControl>
-                <Input type="tel" placeholder="Ej: +34 123 456 789" {...field} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-        <FormField
-          control={form.control}
-          name="email"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Email (Opcional)</FormLabel>
-              <FormControl>
-                <Input type="email" placeholder="Ej: juan.perez@ejemplo.com" {...field} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-        <FormField
-          control={form.control}
-          name="intereses"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Intereses / Notas (Opcional)</FormLabel>
-              <FormControl>
-                <Textarea placeholder="Ej: Interesado en nuevas terapias para diabetes, prefiere visitas por la mañana." {...field} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
+        {/* Campos eliminados: especialidad, telefono, email, intereses */}
         <Button type="submit" disabled={isSubmitting} className="w-full bg-accent hover:bg-accent/90">
           {isSubmitting ? 'Guardando...' : (doctor ? 'Actualizar Médico' : 'Guardar Médico')}
         </Button>

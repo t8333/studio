@@ -17,19 +17,25 @@ export async function saveDoctor(doctorData: OptionalId<Doctor>): Promise<Doctor
     // Update
     const index = doctorsData.findIndex(d => d.id === doctorData.id);
     if (index === -1) throw new Error('Médico no encontrado');
+    // Solo se actualiza el nombre si es lo único que viene del form simplificado
+    // Si vienen más campos (ej. en un futuro si se edita desde otro lado), se actualizan también
     doctorsData[index] = { ...doctorsData[index], ...doctorData } as Doctor;
     revalidatePath('/medicos');
-    revalidatePath('/'); // Revalidate dashboard
+    revalidatePath('/'); 
     return JSON.parse(JSON.stringify(doctorsData[index]));
   } else {
     // Create
     const newDoctor: Doctor = {
-      ...doctorData,
       id: crypto.randomUUID(),
-    } as Doctor;
+      nombre: doctorData.nombre,
+      especialidad: doctorData.especialidad || '', // Asegurar valor por defecto
+      telefono: doctorData.telefono || '', // Asegurar valor por defecto
+      email: doctorData.email || '', // Asegurar valor por defecto
+      intereses: doctorData.intereses || '', // Asegurar valor por defecto
+    };
     doctorsData.push(newDoctor);
     revalidatePath('/medicos');
-    revalidatePath('/'); // Revalidate dashboard
+    revalidatePath('/'); 
     return JSON.parse(JSON.stringify(newDoctor));
   }
 }
@@ -38,13 +44,7 @@ export async function deleteDoctor(id: string): Promise<void> {
   const index = doctorsData.findIndex(d => d.id === id);
   if (index === -1) throw new Error('Médico no encontrado');
   
-  // Check for related visits before deleting - for now, skipping this complexity
-  // const relatedVisits = visitsData.filter(v => v.medicoId === id);
-  // if (relatedVisits.length > 0) {
-  //   throw new Error('No se puede eliminar el médico porque tiene visitas asociadas.');
-  // }
-
   doctorsData.splice(index, 1);
   revalidatePath('/medicos');
-  revalidatePath('/'); // Revalidate dashboard
+  revalidatePath('/'); 
 }

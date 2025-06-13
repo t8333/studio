@@ -1,7 +1,7 @@
 export interface Doctor {
   id: string;
   nombre: string;
-  especialidad: string;
+  especialidad?: string; // Hecho opcional
   telefono?: string;
   email?: string;
   intereses?: string; // For GenAI suggestions
