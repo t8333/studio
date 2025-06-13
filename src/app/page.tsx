@@ -1,9 +1,24 @@
+
 import { AppLayout } from '@/components/layout/AppLayout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { BarChart, LineChart, Package, UsersRound } from 'lucide-react';
+import { Boxes, LineChart, Package, UsersRound } from 'lucide-react';
 import Image from 'next/image';
+import { getDoctors } from '@/lib/actions/medicos.actions';
+import { getProducts } from '@/lib/actions/productos.actions';
+import { getCycles } from '@/lib/actions/ciclos.actions';
 
-export default function DashboardPage() {
+export default async function DashboardPage() {
+  const doctors = await getDoctors();
+  const products = await getProducts();
+  const cycles = await getCycles();
+
+  let totalStock = 0;
+  cycles.forEach(cycle => {
+    cycle.stockProductos.forEach(item => {
+      totalStock += item.cantidad;
+    });
+  });
+
   return (
     <AppLayout>
       <div className="flex flex-col gap-6">
@@ -19,8 +34,8 @@ export default function DashboardPage() {
               <UsersRound className="h-5 w-5 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">125</div> {/* Placeholder */}
-              <p className="text-xs text-muted-foreground">+5 esta semana</p>
+              <div className="text-2xl font-bold">{doctors.length}</div>
+              <p className="text-xs text-muted-foreground">+0 esta semana</p> {/* Placeholder, adjust if dynamic data is available */}
             </CardContent>
           </Card>
           <Card>
@@ -29,18 +44,18 @@ export default function DashboardPage() {
               <Package className="h-5 w-5 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">82</div> {/* Placeholder */}
-              <p className="text-xs text-muted-foreground">3 nuevos este mes</p>
+              <div className="text-2xl font-bold">{products.length}</div>
+              <p className="text-xs text-muted-foreground">+0 este mes</p> {/* Placeholder, adjust if dynamic data is available */}
             </CardContent>
           </Card>
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Visitas este Ciclo</CardTitle>
-              <BarChart className="h-5 w-5 text-muted-foreground" />
+              <CardTitle className="text-sm font-medium">Stock Total en Ciclos</CardTitle>
+              <Boxes className="h-5 w-5 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">342</div> {/* Placeholder */}
-              <p className="text-xs text-muted-foreground">Meta: 500</p>
+              <div className="text-2xl font-bold">{totalStock}</div>
+              <p className="text-xs text-muted-foreground">Unidades disponibles</p>
             </CardContent>
           </Card>
         </div>
@@ -83,3 +98,5 @@ export default function DashboardPage() {
     </AppLayout>
   );
 }
+
+export const dynamic = 'force-dynamic'; // Ensures data is fetched on each request
