@@ -62,7 +62,7 @@ export default async function DashboardPage() {
 
         <div className="mt-6 flex justify-center">
           <Image
-            src="/ositos-asomandose.png"
+            src="/OSITOS_ASOMANDOSE.JPG"
             alt="Ilustración de ositos adorables asomándose"
             width={600}
             height={400}
