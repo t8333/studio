@@ -67,7 +67,7 @@ export default async function DashboardPage() {
             width={600}
             height={400}
             className="rounded-lg shadow-md"
-            data-ai-hint="cute bears"
+            data-ai-hint="peeking bears"
           />
         </div>
         
