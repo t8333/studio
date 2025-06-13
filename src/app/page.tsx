@@ -63,7 +63,7 @@ export default async function DashboardPage() {
         <div className="mt-6 flex flex-col items-center justify-center">
           {/* Se reemplaza el componente Image de Next.js por una etiqueta <img> estándar */}
           <img
-            src="/OSITOS_ASOMANDOSE.JPG"
+            src="/OSITOS_ASOMANDOSE.jpg"
             alt="Ilustración de ositos adorables asomándose"
             width="600"
             height="400"
