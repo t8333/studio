@@ -35,7 +35,7 @@ export default async function DashboardPage() {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">{doctors.length}</div>
-              <p className="text-xs text-muted-foreground">+0 esta semana</p> {/* Placeholder, adjust if dynamic data is available */}
+              <p className="text-xs text-muted-foreground">+0 esta semana</p>
             </CardContent>
           </Card>
           <Card>
@@ -45,7 +45,7 @@ export default async function DashboardPage() {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">{products.length}</div>
-              <p className="text-xs text-muted-foreground">+0 este mes</p> {/* Placeholder, adjust if dynamic data is available */}
+              <p className="text-xs text-muted-foreground">+0 este mes</p>
             </CardContent>
           </Card>
           <Card>
@@ -58,6 +58,17 @@ export default async function DashboardPage() {
               <p className="text-xs text-muted-foreground">Unidades disponibles</p>
             </CardContent>
           </Card>
+        </div>
+
+        <div className="mt-6 flex justify-center">
+          <Image
+            src="https://placehold.co/600x400.png"
+            alt="Dashboard placeholder image"
+            width={600}
+            height={400}
+            className="rounded-lg shadow-md"
+            data-ai-hint="health care team"
+          />
         </div>
         
       </div>
