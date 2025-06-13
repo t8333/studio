@@ -60,14 +60,16 @@ export default async function DashboardPage() {
           </Card>
         </div>
 
-        <div className="mt-6 flex justify-center">
+        <div className="mt-6 flex flex-col items-center justify-center">
           <Image
             src="/OSITOS_ASOMANDOSE.JPG"
             alt="Ilustración de ositos adorables asomándose"
             width={600}
             height={400}
             className="rounded-lg shadow-md"
+            unoptimized={true}
           />
+          <p className="text-xs text-muted-foreground mt-2">Punto de diagnóstico: La imagen debería estar arriba.</p>
         </div>
         
       </div>
@@ -76,4 +78,3 @@ export default async function DashboardPage() {
 }
 
 export const dynamic = 'force-dynamic'; // Ensures data is fetched on each request
-
