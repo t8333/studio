@@ -1,3 +1,4 @@
+
 "use client";
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
@@ -52,22 +53,20 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
             <SidebarMenu>
               {navItems.map((item) => (
                 <SidebarMenuItem key={item.href}>
-                  <Link href={item.href}>
-                    <SidebarMenuButton
-                      asChild
-                      isActive={pathname === item.href || (item.href !== '/' && pathname.startsWith(item.href))}
-                      tooltip={item.label}
-                      className={cn(
-                        "justify-start",
-                        (pathname === item.href || (item.href !== '/' && pathname.startsWith(item.href))) && "bg-sidebar-accent text-sidebar-accent-foreground"
-                      )}
-                    >
-                      <a>
-                        <item.icon className="h-5 w-5" />
-                        <span>{item.label}</span>
-                      </a>
-                    </SidebarMenuButton>
-                  </Link>
+                  <SidebarMenuButton
+                    asChild
+                    isActive={pathname === item.href || (item.href !== '/' && pathname.startsWith(item.href))}
+                    tooltip={item.label}
+                    className={cn(
+                      "justify-start",
+                      (pathname === item.href || (item.href !== '/' && pathname.startsWith(item.href))) && "bg-sidebar-accent text-sidebar-accent-foreground"
+                    )}
+                  >
+                    <Link href={item.href}>
+                      <item.icon className="h-5 w-5" />
+                      <span>{item.label}</span>
+                    </Link>
+                  </SidebarMenuButton>
                 </SidebarMenuItem>
               ))}
             </SidebarMenu>
@@ -76,12 +75,20 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
             {/* Placeholder for potential settings or user profile link */}
             <SidebarMenu>
                 <SidebarMenuItem>
-                    <SidebarMenuButton asChild tooltip="Configuración">
-                        <Link href="/configuracion">
-                            <Settings className="h-5 w-5" />
-                            <span>Configuración</span>
-                        </Link>
-                    </SidebarMenuButton>
+                  <SidebarMenuButton
+                    asChild
+                    isActive={pathname === '/configuracion'}
+                    tooltip="Configuración"
+                    className={cn(
+                      "justify-start",
+                      pathname === '/configuracion' && "bg-sidebar-accent text-sidebar-accent-foreground"
+                    )}
+                  >
+                    <Link href="/configuracion">
+                        <Settings className="h-5 w-5" />
+                        <span>Configuración</span>
+                    </Link>
+                  </SidebarMenuButton>
                 </SidebarMenuItem>
             </SidebarMenu>
           </SidebarFooter>
@@ -94,7 +101,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
               </Button>
             </SidebarTrigger>
             <h1 className="text-lg font-semibold md:text-xl font-headline">
-              {navItems.find(item => pathname === item.href || (item.href !== '/' && pathname.startsWith(item.href)))?.label || 'MediStock'}
+              {navItems.find(item => pathname === item.href || (item.href !== '/' && pathname.startsWith(item.href)))?.label || (pathname === '/configuracion' ? 'Configuración' : 'MediStock')}
             </h1>
           </header>
           <main className="flex-1 overflow-auto p-6">
