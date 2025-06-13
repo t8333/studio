@@ -62,12 +62,11 @@ export default async function DashboardPage() {
 
         <div className="mt-6 flex justify-center">
           <Image
-            src="https://placehold.co/600x400.png"
-            alt="Dashboard placeholder image"
+            src="/ositos-asomandose.png"
+            alt="Ilustración de ositos adorables asomándose"
             width={600}
             height={400}
             className="rounded-lg shadow-md"
-            data-ai-hint="peeking bears"
           />
         </div>
         
