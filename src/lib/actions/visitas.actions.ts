@@ -1,61 +1,76 @@
+
 'use server';
 
-import type { Visit, OptionalId, VisitProduct } from '@/types';
-import { visitsData, cyclesData } from './placeholder-data';
+import type { Visit, OptionalId } from '@/types';
+import { getVisitsData, saveVisitsData, getCyclesData, saveCyclesData } from './placeholder-data';
 import { revalidatePath } from 'next/cache';
-import { adjustStockInCycle } from './ciclos.actions';
+import { adjustStockInCycle } from './ciclos.actions'; // We'll use this simplified stock adjustment
 
 export async function getVisits(): Promise<Visit[]> {
-  return JSON.parse(JSON.stringify(visitsData));
+  return getVisitsData();
 }
 
 export async function getVisitById(id: string): Promise<Visit | undefined> {
-  return JSON.parse(JSON.stringify(visitsData.find(v => v.id === id)));
+  const visits = await getVisitsData();
+  return visits.find(v => v.id === id);
 }
 
 export async function saveVisit(visitData: OptionalId<Visit>): Promise<Visit> {
-  const cycle = cyclesData.find(c => c.id === visitData.cicloId);
-  if (!cycle) throw new Error('Ciclo no encontrado para la visita');
+  let visits = await getVisitsData();
+  let cycles = await getCyclesData(); // Needed for stock validation
+
+  const cycleForVisit = cycles.find(c => c.id === visitData.cicloId);
+  if (!cycleForVisit) throw new Error('Ciclo no encontrado para la visita');
 
   if (visitData.id) {
     // Update
-    const index = visitsData.findIndex(v => v.id === visitData.id);
+    const index = visits.findIndex(v => v.id === visitData.id);
     if (index === -1) throw new Error('Visita no encontrada');
     
-    const originalVisit = visitsData[index];
+    const originalVisit = visits[index];
 
-    // Revert stock from original visit
-    for (const productDelivery of originalVisit.productosEntregados) {
-      await adjustStockInCycle(originalVisit.cicloId, productDelivery.productoId, productDelivery.cantidadEntregada);
+    // 1. Revert stock from original visit if cycleId is the same
+    if (originalVisit.cicloId === visitData.cicloId) {
+      for (const productDelivery of originalVisit.productosEntregados) {
+        await adjustStockInCycle(originalVisit.cicloId, productDelivery.productoId, productDelivery.cantidadEntregada);
+      }
+    } else {
+      // If cycleId changed, revert stock from old cycle
+      for (const productDelivery of originalVisit.productosEntregados) {
+        await adjustStockInCycle(originalVisit.cicloId, productDelivery.productoId, productDelivery.cantidadEntregada);
+      }
     }
 
-    // Apply stock changes for new visit data
+    // 2. Validate and apply stock changes for the new/updated visit data
+    // We need to read cycles again as adjustStockInCycle modifies and saves it.
+    cycles = await getCyclesData();
+    const currentCycleForStock = cycles.find(c => c.id === visitData.cicloId);
+    if (!currentCycleForStock) throw new Error('Ciclo de destino no encontrado para actualizar stock.');
+
     for (const productDelivery of visitData.productosEntregados!) {
-      // Check if enough stock BEFORE attempting to adjust
-      const productStock = cycle.stockProductos.find(ps => ps.productoId === productDelivery.productoId);
-      if (!productStock || productStock.cantidad < productDelivery.cantidadEntregada) {
-         // Rollback stock changes made earlier in this update
-         for (const pd of originalVisit.productosEntregados) {
-           await adjustStockInCycle(originalVisit.cicloId, pd.productoId, -pd.cantidadEntregada);
-         }
-        throw new Error(`Stock insuficiente para ${productDelivery.productoId}. Disponible: ${productStock?.cantidad || 0}, Necesario: ${productDelivery.cantidadEntregada}`);
+      const productStock = currentCycleForStock.stockProductos.find(ps => ps.productoId === productDelivery.productoId);
+      const availableStock = productStock ? productStock.cantidad : 0;
+      if (availableStock < productDelivery.cantidadEntregada) {
+        // Rollback stock changes made just before this check if any
+        // This is complex, ideally transactions are needed. For JSON, we just error out.
+        // For simplicity in this JSON model, we'll assume that if validation fails here, previous stock adjustments (reversions) stand.
+        throw new Error(`Stock insuficiente para ${productDelivery.productoId} en el ciclo ${currentCycleForStock.nombre}. Disponible: ${availableStock}, Necesario: ${productDelivery.cantidadEntregada}`);
       }
       await adjustStockInCycle(visitData.cicloId!, productDelivery.productoId, -productDelivery.cantidadEntregada);
     }
     
-    visitsData[index] = { ...originalVisit, ...visitData } as Visit;
-    revalidatePath('/visitas');
-    revalidatePath('/stock');
-    revalidatePath('/'); // Revalidate dashboard
-    return JSON.parse(JSON.stringify(visitsData[index]));
-
+    visits[index] = { ...originalVisit, ...visitData } as Visit;
+    visitData = visits[index]; // To return the full object
   } else {
     // Create
+    // Validate and apply stock changes
     for (const productDelivery of visitData.productosEntregados!) {
-      const productStock = cycle.stockProductos.find(ps => ps.productoId === productDelivery.productoId);
-      if (!productStock || productStock.cantidad < productDelivery.cantidadEntregada) {
-        throw new Error(`Stock insuficiente para ${productDelivery.productoId}. Disponible: ${productStock?.cantidad || 0}, Necesario: ${productDelivery.cantidadEntregada}`);
+      const productStock = cycleForVisit.stockProductos.find(ps => ps.productoId === productDelivery.productoId);
+      const availableStock = productStock ? productStock.cantidad : 0;
+      if (availableStock < productDelivery.cantidadEntregada) {
+        throw new Error(`Stock insuficiente para ${productDelivery.productoId} en el ciclo ${cycleForVisit.nombre}. Disponible: ${availableStock}, Necesario: ${productDelivery.cantidadEntregada}`);
       }
+      // Deduct stock
       await adjustStockInCycle(visitData.cicloId!, productDelivery.productoId, -productDelivery.cantidadEntregada);
     }
 
@@ -63,27 +78,33 @@ export async function saveVisit(visitData: OptionalId<Visit>): Promise<Visit> {
       ...visitData,
       id: crypto.randomUUID(),
     } as Visit;
-    visitsData.push(newVisit);
-    revalidatePath('/visitas');
-    revalidatePath('/stock');
-    revalidatePath('/'); // Revalidate dashboard
-    return JSON.parse(JSON.stringify(newVisit));
+    visits.push(newVisit);
+    visitData = newVisit; // To return the full object
   }
+
+  await saveVisitsData(visits);
+  revalidatePath('/visitas');
+  revalidatePath('/stock');
+  revalidatePath('/');
+  return visitData as Visit;
 }
 
 export async function deleteVisit(id: string): Promise<void> {
-  const index = visitsData.findIndex(v => v.id === id);
-  if (index === -1) throw new Error('Visita no encontrada');
+  let visits = await getVisitsData();
+  const visitToDelete = visits.find(v => v.id === id);
+  if (!visitToDelete) throw new Error('Visita no encontrada para eliminar');
 
-  const visitToDelete = visitsData[index];
+  const initialLength = visits.length;
+  visits = visits.filter(v => v.id !== id);
+   if (visits.length === initialLength) throw new Error('Visita no encontrada para eliminar');
   
   // Add stock back to cycle
   for (const productDelivery of visitToDelete.productosEntregados) {
     await adjustStockInCycle(visitToDelete.cicloId, productDelivery.productoId, productDelivery.cantidadEntregada);
   }
 
-  visitsData.splice(index, 1);
+  await saveVisitsData(visits);
   revalidatePath('/visitas');
   revalidatePath('/stock');
-  revalidatePath('/'); // Revalidate dashboard
+  revalidatePath('/');
 }

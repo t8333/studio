@@ -2,32 +2,31 @@
 'use server';
 
 import type { Doctor, OptionalId } from '@/types';
-import { doctorsData } from './placeholder-data';
+import { getDoctorsData, saveDoctorsData } from './placeholder-data';
 import { revalidatePath } from 'next/cache';
 
 export async function getDoctors(): Promise<Doctor[]> {
-  return JSON.parse(JSON.stringify(doctorsData));
+  return getDoctorsData();
 }
 
 export async function getDoctorById(id: string): Promise<Doctor | undefined> {
-  return JSON.parse(JSON.stringify(doctorsData.find(d => d.id === id)));
+  const doctors = await getDoctorsData();
+  return doctors.find(d => d.id === id);
 }
 
 export async function saveDoctor(doctorData: OptionalId<Doctor>): Promise<Doctor> {
+  let doctors = await getDoctorsData();
   if (doctorData.id) {
-    const index = doctorsData.findIndex(d => d.id === doctorData.id);
+    const index = doctors.findIndex(d => d.id === doctorData.id);
     if (index === -1) throw new Error('Médico no encontrado');
-    doctorsData[index] = { 
-      ...doctorsData[index], // Preserve existing fields not in form
+    doctors[index] = { 
+      ...doctors[index],
       nombre: doctorData.nombre,
-      especialidad: doctorData.especialidad ?? doctorsData[index].especialidad,
-      telefono: doctorData.telefono ?? doctorsData[index].telefono,
-      email: doctorData.email ?? doctorsData[index].email,
-      intereses: doctorData.intereses ?? doctorsData[index].intereses,
+      especialidad: doctorData.especialidad ?? doctors[index].especialidad,
+      telefono: doctorData.telefono ?? doctors[index].telefono,
+      email: doctorData.email ?? doctors[index].email,
+      intereses: doctorData.intereses ?? doctors[index].intereses,
     } as Doctor;
-    revalidatePath('/medicos');
-    revalidatePath('/'); 
-    return JSON.parse(JSON.stringify(doctorsData[index]));
   } else {
     const newDoctor: Doctor = {
       id: crypto.randomUUID(),
@@ -37,18 +36,22 @@ export async function saveDoctor(doctorData: OptionalId<Doctor>): Promise<Doctor
       email: doctorData.email || '',
       intereses: doctorData.intereses || '',
     };
-    doctorsData.push(newDoctor);
-    revalidatePath('/medicos');
-    revalidatePath('/'); 
-    return JSON.parse(JSON.stringify(newDoctor));
+    doctors.push(newDoctor);
+    doctorData = newDoctor; // to return the full object
   }
+  await saveDoctorsData(doctors);
+  revalidatePath('/medicos');
+  revalidatePath('/'); 
+  return doctorData as Doctor;
 }
 
 export async function deleteDoctor(id: string): Promise<void> {
-  const index = doctorsData.findIndex(d => d.id === id);
-  if (index === -1) throw new Error('Médico no encontrado');
+  let doctors = await getDoctorsData();
+  const initialLength = doctors.length;
+  doctors = doctors.filter(d => d.id !== id);
+  if (doctors.length === initialLength) throw new Error('Médico no encontrado para eliminar');
   
-  doctorsData.splice(index, 1);
+  await saveDoctorsData(doctors);
   revalidatePath('/medicos');
   revalidatePath('/'); 
 }

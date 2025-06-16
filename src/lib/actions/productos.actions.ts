@@ -2,30 +2,31 @@
 'use server';
 
 import type { Product, OptionalId } from '@/types';
-import { productsData, cyclesData } from './placeholder-data';
+import { getProductsData, saveProductsData, getCyclesData, saveCyclesData } from './placeholder-data';
 import { revalidatePath } from 'next/cache';
 
 export async function getProducts(): Promise<Product[]> {
-  return JSON.parse(JSON.stringify(productsData));
+  return getProductsData();
 }
 
 export async function getProductById(id: string): Promise<Product | undefined> {
-  return JSON.parse(JSON.stringify(productsData.find(p => p.id === id)));
+  const products = await getProductsData();
+  return products.find(p => p.id === id);
 }
 
 export async function saveProduct(productData: OptionalId<Product>): Promise<Product> {
+  let products = await getProductsData();
+  let cycles = await getCyclesData();
+
   if (productData.id) {
-    const index = productsData.findIndex(p => p.id === productData.id);
+    const index = products.findIndex(p => p.id === productData.id);
     if (index === -1) throw new Error('Producto no encontrado');
-    productsData[index] = { 
-      ...productsData[index], // Preserve existing fields not in form
+    products[index] = { 
+      ...products[index],
       nombre: productData.nombre,
-      descripcion: productData.descripcion ?? productsData[index].descripcion,
-      identificadorUnico: productData.identificadorUnico ?? productsData[index].identificadorUnico,
+      descripcion: productData.descripcion ?? products[index].descripcion,
+      identificadorUnico: productData.identificadorUnico ?? products[index].identificadorUnico,
     } as Product;
-    revalidatePath('/productos');
-    revalidatePath('/'); 
-    return JSON.parse(JSON.stringify(productsData[index]));
   } else {
     const newProduct: Product = {
       id: crypto.randomUUID(),
@@ -33,30 +34,39 @@ export async function saveProduct(productData: OptionalId<Product>): Promise<Pro
       descripcion: productData.descripcion || '', 
       identificadorUnico: productData.identificadorUnico || '',
     };
-    productsData.push(newProduct);
+    products.push(newProduct);
+    productData = newProduct; // to return the full object
 
-    cyclesData.forEach(cycle => {
+    // Add this new product to all existing cycles with 0 stock
+    cycles.forEach(cycle => {
       if (!cycle.stockProductos.find(sp => sp.productoId === newProduct.id)) {
         cycle.stockProductos.push({ productoId: newProduct.id, cantidad: 0 });
       }
     });
-    
-    revalidatePath('/productos');
-    revalidatePath('/ciclos'); 
-    revalidatePath('/stock');
-    revalidatePath('/'); 
-    return JSON.parse(JSON.stringify(newProduct));
+    await saveCyclesData(cycles);
   }
+
+  await saveProductsData(products);
+  revalidatePath('/productos');
+  revalidatePath('/ciclos'); 
+  revalidatePath('/stock');
+  revalidatePath('/'); 
+  return productData as Product;
 }
 
 export async function deleteProduct(id: string): Promise<void> {
-  const index = productsData.findIndex(p => p.id === id);
-  if (index === -1) throw new Error('Producto no encontrado');
+  let products = await getProductsData();
+  const initialLength = products.length;
+  products = products.filter(p => p.id !== id);
+  if (products.length === initialLength) throw new Error('Producto no encontrado para eliminar');
+  
+  await saveProductsData(products);
 
-  productsData.splice(index, 1);
-  cyclesData.forEach(cycle => {
+  let cycles = await getCyclesData();
+  cycles.forEach(cycle => {
     cycle.stockProductos = cycle.stockProductos.filter(sp => sp.productoId !== id);
   });
+  await saveCyclesData(cycles);
 
   revalidatePath('/productos');
   revalidatePath('/ciclos');
