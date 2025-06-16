@@ -13,27 +13,21 @@ declare global {
   var __visitsData: Visit[] | undefined;
 }
 
-if (process.env.NODE_ENV === 'production') {
-  // In production, always initialize fresh. This is placeholder data.
+// Attempt to use existing global data if available, otherwise initialize.
+// This will persist data in memory for the lifetime of the server process.
+// It's suitable for development and simple single-instance "test server" scenarios.
+// For production with multiple instances or restarts, a proper database is needed.
+if (!global.__doctorsData) {
   global.__doctorsData = [];
+}
+if (!global.__productsData) {
   global.__productsData = [];
+}
+if (!global.__cyclesData) {
   global.__cyclesData = [];
+}
+if (!global.__visitsData) {
   global.__visitsData = [];
-} else {
-  // In development, use existing global data if available, otherwise initialize.
-  // This helps persist data across HMR updates.
-  if (!global.__doctorsData) {
-    global.__doctorsData = [];
-  }
-  if (!global.__productsData) {
-    global.__productsData = [];
-  }
-  if (!global.__cyclesData) {
-    global.__cyclesData = [];
-  }
-  if (!global.__visitsData) {
-    global.__visitsData = [];
-  }
 }
 
 export const doctorsData: Doctor[] = global.__doctorsData!;
