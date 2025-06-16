@@ -2,56 +2,55 @@
 'use server';
 
 import type { Doctor, OptionalId } from '@/types';
-import { getDoctorsData, saveDoctorsData } from './placeholder-data';
+import { db } from '@/lib/firebase';
+import { collection, getDocs, doc, getDoc, addDoc, setDoc, deleteDoc, query, orderBy } from 'firebase/firestore';
 import { revalidatePath } from 'next/cache';
 
+const doctorsCollection = collection(db, 'medicos');
+
 export async function getDoctors(): Promise<Doctor[]> {
-  return getDoctorsData();
+  const q = query(doctorsCollection, orderBy('nombre'));
+  const snapshot = await getDocs(q);
+  return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Doctor));
 }
 
 export async function getDoctorById(id: string): Promise<Doctor | undefined> {
-  const doctors = await getDoctorsData();
-  return doctors.find(d => d.id === id);
+  const docRef = doc(db, 'medicos', id);
+  const docSnap = await getDoc(docRef);
+  if (docSnap.exists()) {
+    return { id: docSnap.id, ...docSnap.data() } as Doctor;
+  }
+  return undefined;
 }
 
 export async function saveDoctor(doctorData: OptionalId<Doctor>): Promise<Doctor> {
-  let doctors = await getDoctorsData();
+  const dataToSave = {
+    nombre: doctorData.nombre,
+    especialidad: doctorData.especialidad || '',
+    telefono: doctorData.telefono || '',
+    email: doctorData.email || '',
+    intereses: doctorData.intereses || '',
+  };
+
+  let savedDoctorId: string;
+
   if (doctorData.id) {
-    const index = doctors.findIndex(d => d.id === doctorData.id);
-    if (index === -1) throw new Error('Médico no encontrado');
-    doctors[index] = { 
-      ...doctors[index],
-      nombre: doctorData.nombre,
-      especialidad: doctorData.especialidad ?? doctors[index].especialidad,
-      telefono: doctorData.telefono ?? doctors[index].telefono,
-      email: doctorData.email ?? doctors[index].email,
-      intereses: doctorData.intereses ?? doctors[index].intereses,
-    } as Doctor;
+    const docRef = doc(db, 'medicos', doctorData.id);
+    await setDoc(docRef, dataToSave, { merge: true });
+    savedDoctorId = doctorData.id;
   } else {
-    const newDoctor: Doctor = {
-      id: crypto.randomUUID(),
-      nombre: doctorData.nombre,
-      especialidad: doctorData.especialidad || '',
-      telefono: doctorData.telefono || '',
-      email: doctorData.email || '',
-      intereses: doctorData.intereses || '',
-    };
-    doctors.push(newDoctor);
-    doctorData = newDoctor; // to return the full object
+    const docRef = await addDoc(doctorsCollection, dataToSave);
+    savedDoctorId = docRef.id;
   }
-  await saveDoctorsData(doctors);
+
   revalidatePath('/medicos');
-  revalidatePath('/'); 
-  return doctorData as Doctor;
+  revalidatePath('/');
+  return { id: savedDoctorId, ...dataToSave };
 }
 
 export async function deleteDoctor(id: string): Promise<void> {
-  let doctors = await getDoctorsData();
-  const initialLength = doctors.length;
-  doctors = doctors.filter(d => d.id !== id);
-  if (doctors.length === initialLength) throw new Error('Médico no encontrado para eliminar');
-  
-  await saveDoctorsData(doctors);
+  const docRef = doc(db, 'medicos', id);
+  await deleteDoc(docRef);
   revalidatePath('/medicos');
-  revalidatePath('/'); 
+  revalidatePath('/');
 }

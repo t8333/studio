@@ -2,75 +2,83 @@
 'use server';
 
 import type { Product, OptionalId } from '@/types';
-import { getProductsData, saveProductsData, getCyclesData, saveCyclesData } from './placeholder-data';
+import { db } from '@/lib/firebase';
+import { collection, getDocs, doc, getDoc, addDoc, setDoc, deleteDoc, writeBatch, query, orderBy } from 'firebase/firestore';
 import { revalidatePath } from 'next/cache';
+import { getCycles } from './ciclos.actions';
+
+const productsCollection = collection(db, 'productos');
 
 export async function getProducts(): Promise<Product[]> {
-  return getProductsData();
+  const q = query(productsCollection, orderBy('nombre'));
+  const snapshot = await getDocs(q);
+  return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Product));
 }
 
 export async function getProductById(id: string): Promise<Product | undefined> {
-  const products = await getProductsData();
-  return products.find(p => p.id === id);
+  const docRef = doc(db, 'productos', id);
+  const docSnap = await getDoc(docRef);
+  if (docSnap.exists()) {
+    return { id: docSnap.id, ...docSnap.data() } as Product;
+  }
+  return undefined;
 }
 
 export async function saveProduct(productData: OptionalId<Product>): Promise<Product> {
-  let products = await getProductsData();
-  let cycles = await getCyclesData();
+  const dataToSave = {
+    nombre: productData.nombre,
+    descripcion: productData.descripcion || '',
+    identificadorUnico: productData.identificadorUnico || '',
+  };
+
+  let savedProductId: string;
 
   if (productData.id) {
-    const index = products.findIndex(p => p.id === productData.id);
-    if (index === -1) throw new Error('Producto no encontrado');
-    products[index] = { 
-      ...products[index],
-      nombre: productData.nombre,
-      descripcion: productData.descripcion ?? products[index].descripcion,
-      identificadorUnico: productData.identificadorUnico ?? products[index].identificadorUnico,
-    } as Product;
+    const docRef = doc(db, 'productos', productData.id);
+    await setDoc(docRef, dataToSave, { merge: true });
+    savedProductId = productData.id;
   } else {
-    const newProduct: Product = {
-      id: crypto.randomUUID(),
-      nombre: productData.nombre,
-      descripcion: productData.descripcion || '', 
-      identificadorUnico: productData.identificadorUnico || '',
-    };
-    products.push(newProduct);
-    productData = newProduct; // to return the full object
+    const docRef = await addDoc(productsCollection, dataToSave);
+    savedProductId = docRef.id;
 
-    // Add this new product to all existing cycles with 0 stock
+    // Cuando se crea un nuevo producto, asegurarse de que se añade a la lista de stock de todos los ciclos con cantidad 0
+    const cycles = await getCycles();
+    const batch = writeBatch(db);
     cycles.forEach(cycle => {
-      if (!cycle.stockProductos.find(sp => sp.productoId === newProduct.id)) {
-        cycle.stockProductos.push({ productoId: newProduct.id, cantidad: 0 });
+      const cycleRef = doc(db, 'ciclos', cycle.id);
+      const newStockProductos = [...cycle.stockProductos]; // Clonar array
+      if (!newStockProductos.find(sp => sp.productoId === savedProductId)) {
+        newStockProductos.push({ productoId: savedProductId, cantidad: 0 });
       }
+      batch.update(cycleRef, { stockProductos: newStockProductos });
     });
-    await saveCyclesData(cycles);
+    await batch.commit();
   }
 
-  await saveProductsData(products);
   revalidatePath('/productos');
-  revalidatePath('/ciclos'); 
+  revalidatePath('/ciclos'); // Revalidar ciclos porque su stock puede haber cambiado
   revalidatePath('/stock');
-  revalidatePath('/'); 
-  return productData as Product;
+  revalidatePath('/');
+  return { id: savedProductId, ...dataToSave };
 }
 
 export async function deleteProduct(id: string): Promise<void> {
-  let products = await getProductsData();
-  const initialLength = products.length;
-  products = products.filter(p => p.id !== id);
-  if (products.length === initialLength) throw new Error('Producto no encontrado para eliminar');
-  
-  await saveProductsData(products);
+  const productDocRef = doc(db, 'productos', id);
+  await deleteDoc(productDocRef);
 
-  let cycles = await getCyclesData();
+  // Eliminar el producto del stock de todos los ciclos
+  const cycles = await getCycles();
+  const batch = writeBatch(db);
   cycles.forEach(cycle => {
-    cycle.stockProductos = cycle.stockProductos.filter(sp => sp.productoId !== id);
+    const cycleRef = doc(db, 'ciclos', cycle.id);
+    const updatedStockProductos = cycle.stockProductos.filter(sp => sp.productoId !== id);
+    batch.update(cycleRef, { stockProductos: updatedStockProductos });
   });
-  await saveCyclesData(cycles);
+  await batch.commit();
 
   revalidatePath('/productos');
-  revalidatePath('/ciclos');
-  revalidatePath('/visitas');
+  revalidatePath('/ciclos'); // Revalidar ciclos
+  revalidatePath('/visitas'); // Revalidar visitas por si se referenciaba el producto
   revalidatePath('/stock');
-  revalidatePath('/'); 
+  revalidatePath('/');
 }
