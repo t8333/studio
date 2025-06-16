@@ -8,7 +8,7 @@ import type { Doctor, Product, Cycle, Visit } from '@/types';
 const dataDir = path.join(process.cwd(), 'src', 'lib', 'data');
 const IS_VERCEL = !!process.env.VERCEL;
 
-// Almacenes en memoria, usados principalmente en Vercel para escrituras temporales.
+// In-memory stores. These will be the primary source in Vercel or if file loading fails.
 let doctorsStore: Doctor[] = [];
 let productsStore: Product[] = [];
 let cyclesStore: Cycle[] = [];
@@ -21,105 +21,123 @@ async function ensureDataDirExists() {
     try {
       await fs.access(dataDir);
     } catch {
-      await fs.mkdir(dataDir, { recursive: true });
+      try {
+        await fs.mkdir(dataDir, { recursive: true });
+        // console.log(`Data directory created: ${dataDir}`);
+      } catch (mkdirError) {
+        console.error(`Failed to create data directory ${dataDir}:`, mkdirError);
+      }
     }
   }
 }
 
-async function loadDataFromFile<T>(fileName: string): Promise<T[]> {
+async function loadDataFromFile<T>(fileName: string, inMemoryStore: T[]): Promise<T[]> {
+  if (IS_VERCEL && inMemoryStore.length > 0 && dataInitialized) { // In Vercel, after initial load, use memory
+    return inMemoryStore.map(item => ({ ...item }));
+  }
+
+  const filePath = path.join(dataDir, fileName);
+  try {
+    await ensureDataDirExists(); // Ensure directory exists before trying to read/write
+    const fileContent = await fs.readFile(filePath, 'utf-8');
+    // console.log(`Successfully read ${fileName}`);
+    return JSON.parse(fileContent) as T[];
+  } catch (error: any) {
+    // console.warn(`Could not read ${fileName}: ${error.message}. Using in-memory store or initializing as empty.`);
+    if (!IS_VERCEL) { // If local and file doesn't exist or is corrupted, try to create it
+      try {
+        await fs.writeFile(filePath, JSON.stringify([], null, 2));
+        // console.log(`Created empty ${fileName} locally.`);
+      } catch (writeError: any) {
+        console.error(`Failed to create empty ${fileName} locally: ${writeError.message}`);
+      }
+    }
+    return []; // Return empty or current in-memory if Vercel
+  }
+}
+
+async function saveDataToFile<T>(fileName: string, data: T[]): Promise<void> {
+  if (IS_VERCEL) {
+    // console.log(`Vercel environment: Skipping file write for ${fileName}. Data is in memory.`);
+    return; // Don't write to file system on Vercel
+  }
   await ensureDataDirExists();
   const filePath = path.join(dataDir, fileName);
   try {
-    const fileContent = await fs.readFile(filePath, 'utf-8');
-    return JSON.parse(fileContent) as T[];
-  } catch (error) {
-    if (!IS_VERCEL) {
-      // En local, si el archivo no existe o hay error, lo creamos vacío.
-      await fs.writeFile(filePath, JSON.stringify([], null, 2));
-    }
-    // En Vercel, si el archivo no está en el build, o local si hay error, devolvemos vacío.
-    return [];
+    await fs.writeFile(filePath, JSON.stringify(data, null, 2));
+    // console.log(`Successfully wrote to ${fileName}`);
+  } catch (error: any) {
+    console.error(`Failed to write to ${fileName}: ${error.message}`);
   }
 }
 
-async function initializeStores() {
-  if (dataInitialized) return;
+async function initializeAllStores() {
+  if (dataInitialized && IS_VERCEL) return; // In Vercel, only initialize once
 
-  // Cargar desde archivos a los stores en memoria.
-  // Esto es importante para que Vercel tenga los datos del build como base.
-  doctorsStore = await loadDataFromFile<Doctor>('doctors.json');
-  productsStore = await loadDataFromFile<Product>('products.json');
-  cyclesStore = await loadDataFromFile<Cycle>('cycles.json');
-  visitsStore = await loadDataFromFile<Visit>('visits.json');
-  
+  doctorsStore = await loadDataFromFile<Doctor>('doctors.json', doctorsStore);
+  productsStore = await loadDataFromFile<Product>('products.json', productsStore);
+  cyclesStore = await loadDataFromFile<Cycle>('cycles.json', cyclesStore);
+  visitsStore = await loadDataFromFile<Visit>('visits.json', visitsStore);
+
   dataInitialized = true;
+  // console.log("All data stores initialized.");
 }
-
 
 // Doctors
 export async function getDoctorsData(): Promise<Doctor[]> {
-  await initializeStores();
-  return doctorsStore.map(d => ({ ...d })); // Devolver copia
+  await initializeAllStores();
+  return doctorsStore.map(d => ({ ...d })).sort((a, b) => a.nombre.localeCompare(b.nombre));
 }
 export async function saveDoctorsData(data: Doctor[]): Promise<void> {
-  await initializeStores();
-  doctorsStore = data.map(d => ({ ...d })); // Actualizar store en memoria con copia
-  if (!IS_VERCEL) {
-    const filePath = path.join(dataDir, 'doctors.json');
-    await fs.writeFile(filePath, JSON.stringify(doctorsStore, null, 2));
-  }
+  await initializeAllStores(); 
+  doctorsStore = data.map(d => ({ ...d }));
+  await saveDataToFile<Doctor>('doctors.json', doctorsStore);
 }
 
 // Products
 export async function getProductsData(): Promise<Product[]> {
-  await initializeStores();
-  return productsStore.map(p => ({ ...p }));
+  await initializeAllStores();
+  return productsStore.map(p => ({ ...p })).sort((a, b) => a.nombre.localeCompare(b.nombre));
 }
 export async function saveProductsData(data: Product[]): Promise<void> {
-  await initializeStores();
+  await initializeAllStores();
   productsStore = data.map(p => ({ ...p }));
-  if (!IS_VERCEL) {
-    const filePath = path.join(dataDir, 'products.json');
-    await fs.writeFile(filePath, JSON.stringify(productsStore, null, 2));
-  }
+  await saveDataToFile<Product>('products.json', productsStore);
 }
 
 // Cycles
 export async function getCyclesData(): Promise<Cycle[]> {
-  await initializeStores();
-  return cyclesStore.map(c => ({ 
-    ...c, 
-    stockProductos: c.stockProductos.map(sp => ({...sp})) // Copia profunda para array anidado
-  }));
+  await initializeAllStores();
+  return cyclesStore.map(c => ({
+    ...c,
+    fechaInicio: new Date(c.fechaInicio).toISOString(),
+    fechaFin: new Date(c.fechaFin).toISOString(),
+    stockProductos: Array.isArray(c.stockProductos) ? c.stockProductos.map(sp => ({ ...sp })) : []
+  })).sort((a, b) => new Date(b.fechaInicio).getTime() - new Date(a.fechaInicio).getTime());
 }
 export async function saveCyclesData(data: Cycle[]): Promise<void> {
-  await initializeStores();
-  cyclesStore = data.map(c => ({ 
+  await initializeAllStores();
+  cyclesStore = data.map(c => ({
     ...c,
-    stockProductos: c.stockProductos.map(sp => ({...sp}))
+    stockProductos: Array.isArray(c.stockProductos) ? c.stockProductos.map(sp => ({ ...sp })) : []
   }));
-  if (!IS_VERCEL) {
-    const filePath = path.join(dataDir, 'cycles.json');
-    await fs.writeFile(filePath, JSON.stringify(cyclesStore, null, 2));
-  }
+  await saveDataToFile<Cycle>('cycles.json', cyclesStore);
 }
 
 // Visits
 export async function getVisitsData(): Promise<Visit[]> {
-  await initializeStores();
-  return visitsStore.map(v => ({ 
+  await initializeAllStores();
+  return visitsStore.map(v => ({
     ...v,
-    productosEntregados: v.productosEntregados.map(vp => ({...vp})) // Copia profunda para array anidado
-  }));
+    fecha: new Date(v.fecha).toISOString(),
+    productosEntregados: Array.isArray(v.productosEntregados) ? v.productosEntregados.map(vp => ({ ...vp })) : []
+  })).sort((a, b) => new Date(b.fecha).getTime() - new Date(a.fecha).getTime());
 }
 export async function saveVisitsData(data: Visit[]): Promise<void> {
-  await initializeStores();
-  visitsStore = data.map(v => ({ 
+  await initializeAllStores();
+  visitsStore = data.map(v => ({
     ...v,
-    productosEntregados: v.productosEntregados.map(vp => ({...vp}))
+    productosEntregados: Array.isArray(v.productosEntregados) ? v.productosEntregados.map(vp => ({ ...vp })) : []
   }));
-  if (!IS_VERCEL) {
-    const filePath = path.join(dataDir, 'visits.json');
-    await fs.writeFile(filePath, JSON.stringify(visitsStore, null, 2));
-  }
+  await saveDataToFile<Visit>('visits.json', visitsStore);
 }

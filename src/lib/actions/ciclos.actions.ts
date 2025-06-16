@@ -1,98 +1,74 @@
 
 'use server';
 
-import type { Cycle, OptionalId, CycleProductStock, Product } from '@/types';
-import { db } from '@/lib/firebase';
-import { collection, getDocs, doc, getDoc, addDoc, setDoc, deleteDoc, Timestamp, writeBatch, query, orderBy, updateDoc } from 'firebase/firestore';
+import type { Cycle, OptionalId, CycleProductStock } from '@/types';
+import { getCyclesData, saveCyclesData, getProductsData, getVisitsData, saveVisitsData } from './placeholder-data';
 import { revalidatePath } from 'next/cache';
-import { getProducts } from './productos.actions';
-import { getVisits } from './visitas.actions';
-
-const cyclesCollection = collection(db, 'ciclos');
-
-function mapCycleFromFirestore(docSnap: any): Cycle {
-  const data = docSnap.data();
-  return {
-    id: docSnap.id,
-    nombre: data.nombre,
-    fechaInicio: (data.fechaInicio instanceof Timestamp ? data.fechaInicio.toDate() : new Date(data.fechaInicio)).toISOString(),
-    fechaFin: (data.fechaFin instanceof Timestamp ? data.fechaFin.toDate() : new Date(data.fechaFin)).toISOString(),
-    stockProductos: data.stockProductos || [],
-    prioridadesMarketing: data.prioridadesMarketing || '',
-  } as Cycle;
-}
 
 export async function getCycles(): Promise<Cycle[]> {
-  const q = query(cyclesCollection, orderBy('fechaInicio', 'desc'));
-  const snapshot = await getDocs(q);
-  return snapshot.docs.map(mapCycleFromFirestore);
+  return await getCyclesData();
 }
 
 export async function getCycleById(id: string): Promise<Cycle | undefined> {
-  const docRef = doc(db, 'ciclos', id);
-  const docSnap = await getDoc(docRef);
-  if (docSnap.exists()) {
-    return mapCycleFromFirestore(docSnap);
-  }
-  return undefined;
+  const cycles = await getCyclesData();
+  return cycles.find(c => c.id === id);
 }
 
 export async function saveCycle(cycleData: OptionalId<Cycle>): Promise<Cycle> {
-  const allProducts = await getProducts();
-  let currentStock = cycleData.stockProductos || [];
-  const stockMap = new Map(currentStock.map(item => [item.productoId, item.cantidad]));
-  
-  const completeStock: CycleProductStock[] = allProducts.map(product => ({
-    productoId: product.id,
-    cantidad: stockMap.get(product.id) || 0,
-  }));
+  let cycles = await getCyclesData();
+  const allProducts = await getProductsData();
+  let savedCycle: Cycle;
+
+  const completeStock: CycleProductStock[] = allProducts.map(product => {
+    const existingStockItem = (cycleData.stockProductos || []).find(sp => sp.productoId === product.id);
+    return {
+      productoId: product.id,
+      cantidad: existingStockItem ? existingStockItem.cantidad : 0,
+    };
+  });
 
   const dataToSave = {
     nombre: cycleData.nombre,
-    fechaInicio: Timestamp.fromDate(new Date(cycleData.fechaInicio)),
-    fechaFin: Timestamp.fromDate(new Date(cycleData.fechaFin)),
+    fechaInicio: new Date(cycleData.fechaInicio).toISOString(),
+    fechaFin: new Date(cycleData.fechaFin).toISOString(),
     prioridadesMarketing: cycleData.prioridadesMarketing || '',
     stockProductos: completeStock,
   };
 
-  let savedCycleId: string;
-
   if (cycleData.id) {
-    const docRef = doc(db, 'ciclos', cycleData.id);
-    await setDoc(docRef, dataToSave, { merge: true });
-    savedCycleId = cycleData.id;
+    const index = cycles.findIndex(c => c.id === cycleData.id);
+    if (index === -1) throw new Error('Ciclo no encontrado para actualizar');
+    savedCycle = { ...cycles[index], ...dataToSave, id: cycleData.id }; // Ensure id is preserved
+    cycles[index] = savedCycle;
   } else {
-    const docRef = await addDoc(cyclesCollection, dataToSave);
-    savedCycleId = docRef.id;
+    savedCycle = {
+      ...dataToSave,
+      id: String(Date.now() + Math.random()), // Simple unique ID
+    } as Cycle; // Cast needed as id is now definitely present
+    cycles.push(savedCycle);
   }
 
+  await saveCyclesData(cycles);
   revalidatePath('/ciclos');
   revalidatePath('/stock');
   revalidatePath('/');
-  
-  return { 
-    id: savedCycleId,
-    ...cycleData,
-    fechaInicio: dataToSave.fechaInicio.toDate().toISOString(),
-    fechaFin: dataToSave.fechaFin.toDate().toISOString(),
-    stockProductos: dataToSave.stockProductos,
-    prioridadesMarketing: dataToSave.prioridadesMarketing,
-  };
+  return savedCycle;
 }
 
 export async function deleteCycle(id: string): Promise<void> {
-  const batch = writeBatch(db);
-  const cycleDocRef = doc(db, 'ciclos', id);
-  batch.delete(cycleDocRef);
+  let cycles = await getCyclesData();
+  const initialLength = cycles.length;
+  cycles = cycles.filter(c => c.id !== id);
+   if (cycles.length === initialLength && initialLength > 0) {
+    // No error if not found
+  }
+  await saveCyclesData(cycles);
 
-  const visits = await getVisits();
-  const visitsToDelete = visits.filter(v => v.cicloId === id);
-  visitsToDelete.forEach(visit => {
-    const visitDocRef = doc(db, 'visitas', visit.id);
-    batch.delete(visitDocRef);
-  });
+  // Delete associated visits
+  let visits = await getVisitsData();
+  visits = visits.filter(v => v.cicloId !== id);
+  await saveVisitsData(visits);
 
-  await batch.commit();
   revalidatePath('/ciclos');
   revalidatePath('/visitas');
   revalidatePath('/stock');
@@ -100,14 +76,13 @@ export async function deleteCycle(id: string): Promise<void> {
 }
 
 export async function updateCycleStock(cycleId: string, updatedStockItems: CycleProductStock[]): Promise<void> {
-  const cycleRef = doc(db, 'ciclos', cycleId);
-  const cycleSnap = await getDoc(cycleRef);
+  let cycles = await getCyclesData();
+  const cycleIndex = cycles.findIndex(c => c.id === cycleId);
+  if (cycleIndex === -1) throw new Error('Ciclo no encontrado');
 
-  if (!cycleSnap.exists()) throw new Error('Ciclo no encontrado');
-  
-  const allProducts = await getProducts();
+  const allProducts = await getProductsData();
   for (const stockItem of updatedStockItems) {
-    if (!allProducts.find(p => p.id === stockItem.productoId)) {
+     if (!allProducts.find(p => p.id === stockItem.productoId)) {
       throw new Error(`Producto con ID ${stockItem.productoId} no encontrado en el catálogo general.`);
     }
     if (stockItem.cantidad < 0) {
@@ -115,7 +90,7 @@ export async function updateCycleStock(cycleId: string, updatedStockItems: Cycle
       throw new Error(`La cantidad de stock para el producto ${productName} no puede ser negativa.`);
     }
   }
-
+  
   const completeStockList: CycleProductStock[] = allProducts.map(p => {
     const existingStockItem = updatedStockItems.find(us => us.productoId === p.id);
     return {
@@ -124,7 +99,8 @@ export async function updateCycleStock(cycleId: string, updatedStockItems: Cycle
     };
   });
 
-  await setDoc(cycleRef, { stockProductos: completeStockList }, { merge: true });
+  cycles[cycleIndex].stockProductos = completeStockList;
+  await saveCyclesData(cycles);
   revalidatePath('/ciclos');
   revalidatePath('/stock');
   revalidatePath('/');

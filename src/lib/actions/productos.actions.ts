@@ -2,83 +2,77 @@
 'use server';
 
 import type { Product, OptionalId } from '@/types';
-import { db } from '@/lib/firebase';
-import { collection, getDocs, doc, getDoc, addDoc, setDoc, deleteDoc, writeBatch, query, orderBy } from 'firebase/firestore';
+import { getProductsData, saveProductsData, getCyclesData, saveCyclesData } from './placeholder-data';
 import { revalidatePath } from 'next/cache';
-import { getCycles } from './ciclos.actions';
-
-const productsCollection = collection(db, 'productos');
 
 export async function getProducts(): Promise<Product[]> {
-  const q = query(productsCollection, orderBy('nombre'));
-  const snapshot = await getDocs(q);
-  return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Product));
+  return await getProductsData();
 }
 
 export async function getProductById(id: string): Promise<Product | undefined> {
-  const docRef = doc(db, 'productos', id);
-  const docSnap = await getDoc(docRef);
-  if (docSnap.exists()) {
-    return { id: docSnap.id, ...docSnap.data() } as Product;
-  }
-  return undefined;
+  const products = await getProductsData();
+  return products.find(p => p.id === id);
 }
 
 export async function saveProduct(productData: OptionalId<Product>): Promise<Product> {
-  const dataToSave = {
-    nombre: productData.nombre,
-    descripcion: productData.descripcion || '',
-    identificadorUnico: productData.identificadorUnico || '',
-  };
-
-  let savedProductId: string;
+  let products = await getProductsData();
+  let savedProduct: Product;
 
   if (productData.id) {
-    const docRef = doc(db, 'productos', productData.id);
-    await setDoc(docRef, dataToSave, { merge: true });
-    savedProductId = productData.id;
+    const index = products.findIndex(p => p.id === productData.id);
+    if (index === -1) throw new Error('Producto no encontrado para actualizar');
+    savedProduct = { ...products[index], ...productData, id: productData.id }; // Ensure id is preserved
+    products[index] = savedProduct;
   } else {
-    const docRef = await addDoc(productsCollection, dataToSave);
-    savedProductId = docRef.id;
+    savedProduct = {
+      nombre: productData.nombre,
+      descripcion: productData.descripcion || '',
+      identificadorUnico: productData.identificadorUnico || '',
+      id: String(Date.now() + Math.random()), // Simple unique ID
+    };
+    products.push(savedProduct);
 
-    // Cuando se crea un nuevo producto, asegurarse de que se añade a la lista de stock de todos los ciclos con cantidad 0
-    const cycles = await getCycles();
-    const batch = writeBatch(db);
-    cycles.forEach(cycle => {
-      const cycleRef = doc(db, 'ciclos', cycle.id);
-      const newStockProductos = [...cycle.stockProductos]; // Clonar array
-      if (!newStockProductos.find(sp => sp.productoId === savedProductId)) {
-        newStockProductos.push({ productoId: savedProductId, cantidad: 0 });
+    // Add new product to all cycles' stock with quantity 0
+    let cycles = await getCyclesData();
+    cycles = cycles.map(cycle => {
+      const newStockProductos = [...(cycle.stockProductos || [])];
+      if (!newStockProductos.find(sp => sp.productoId === savedProduct.id)) {
+        newStockProductos.push({ productoId: savedProduct.id, cantidad: 0 });
       }
-      batch.update(cycleRef, { stockProductos: newStockProductos });
+      return { ...cycle, stockProductos: newStockProductos };
     });
-    await batch.commit();
+    await saveCyclesData(cycles);
   }
 
+  await saveProductsData(products);
   revalidatePath('/productos');
-  revalidatePath('/ciclos'); // Revalidar ciclos porque su stock puede haber cambiado
+  revalidatePath('/ciclos');
   revalidatePath('/stock');
   revalidatePath('/');
-  return { id: savedProductId, ...dataToSave };
+  return savedProduct;
 }
 
 export async function deleteProduct(id: string): Promise<void> {
-  const productDocRef = doc(db, 'productos', id);
-  await deleteDoc(productDocRef);
+  let products = await getProductsData();
+  const initialLength = products.length;
+  products = products.filter(p => p.id !== id);
+   if (products.length === initialLength && initialLength > 0) {
+    // No error if product not found, just means no action taken.
+  }
+  
+  await saveProductsData(products);
 
-  // Eliminar el producto del stock de todos los ciclos
-  const cycles = await getCycles();
-  const batch = writeBatch(db);
-  cycles.forEach(cycle => {
-    const cycleRef = doc(db, 'ciclos', cycle.id);
-    const updatedStockProductos = cycle.stockProductos.filter(sp => sp.productoId !== id);
-    batch.update(cycleRef, { stockProductos: updatedStockProductos });
-  });
-  await batch.commit();
+  // Remove product from all cycles' stock
+  let cycles = await getCyclesData();
+  cycles = cycles.map(cycle => ({
+    ...cycle,
+    stockProductos: (cycle.stockProductos || []).filter(sp => sp.productoId !== id)
+  }));
+  await saveCyclesData(cycles);
 
   revalidatePath('/productos');
-  revalidatePath('/ciclos'); // Revalidar ciclos
-  revalidatePath('/visitas'); // Revalidar visitas por si se referenciaba el producto
+  revalidatePath('/ciclos');
+  revalidatePath('/visitas');
   revalidatePath('/stock');
   revalidatePath('/');
 }

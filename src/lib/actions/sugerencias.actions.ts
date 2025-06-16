@@ -3,7 +3,7 @@
 import { suggestProductsForDoctor as suggestProductsForDoctorFlow, type SuggestProductsForDoctorInput, type SuggestProductsForDoctorOutput } from '@/ai/flows/suggest-products-for-doctor';
 import { getDoctorById } from './medicos.actions';
 import { getCycleById } from './ciclos.actions';
-import { getProducts } from './productos.actions'; // Necesitamos los detalles de todos los productos
+import { getProducts } from './productos.actions'; 
 import type { Product } from '@/types';
 
 export async function getProductSuggestions(
@@ -13,21 +13,19 @@ export async function getProductSuggestions(
   
   const doctor = await getDoctorById(doctorId);
   const cycle = await getCycleById(cycleId);
-  const allProducts = await getProducts(); // Obtener todos los productos para buscar detalles
+  const allProducts = await getProducts(); 
 
   if (!doctor) throw new Error("Médico no encontrado");
   if (!cycle) throw new Error("Ciclo no encontrado");
 
-  // Mapear el stock del ciclo a productos con detalles completos y filtrar los que tienen stock
-  const availableProductsWithStock = cycle.stockProductos
+  const availableProductsWithStock = (cycle.stockProductos || [])
     .map(stockItem => {
       const productDetails = allProducts.find(p => p.id === stockItem.productoId);
-      // Solo incluir si el producto existe y tiene stock
       return productDetails && stockItem.cantidad > 0 
         ? { ...productDetails, stock: stockItem.cantidad } 
         : null;
     })
-    .filter(p => p !== null) as (Product & { stock: number })[]; // Asegurar que p no sea null
+    .filter(p => p !== null) as (Product & { stock: number })[]; 
 
 
   const input: SuggestProductsForDoctorInput = {
