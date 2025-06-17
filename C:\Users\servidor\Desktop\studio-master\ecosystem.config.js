@@ -5,7 +5,7 @@ module.exports = {
       name   : "medistock-app",
       interpreter : "C:\\Program Files\\nodejs\\node.exe",
       script    : "C:\\Users\\servidor\\Desktop\\studio-master\\node_modules\\next\\dist\\bin\\next",
-      args      : "dev -p 9002", // Eliminado --turbopack
+      args      : "dev -p 9002",
       cwd       : "C:\\Users\\servidor\\Desktop\\studio-master",
       watch     : ["src", "public", "components.json", "next.config.ts", "tailwind.config.ts", "tsconfig.json"],
       ignore_watch : ["node_modules", ".next", "src/lib/data"],
@@ -15,6 +15,5 @@ module.exports = {
       exec_mode : "fork",
       interpreter_args: []
     }
-    // La configuración de medistock-tunnel ha sido eliminada
   ]
 }
