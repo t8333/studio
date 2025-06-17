@@ -19,15 +19,14 @@ module.exports = {
     },
     {
       name      : "medistock-tunnel",
-      script    : "C:\\Users\\servidor\\AppData\\Roaming\\npm\\lt.cmd", // Ruta completa a lt.cmd
-      args      : "--port 3000", // Apunta al puerto donde corre medistock-app
-      watch     : false, // No es necesario observar cambios en localtunnel
-      autorestart: true, // Reinicia si falla
-      restart_delay: 5000, // Espera 5 segundos antes de reiniciar
-      // NO se especifica 'interpreter' aquí, para que PM2 trate de ejecutar el .cmd directamente.
-      // El propio archivo .cmd llamará a node.
+      script    : "C:\\Windows\\System32\\cmd.exe", // Usar cmd.exe como el script principal
+      args      : ["/c", "C:\\Users\\servidor\\AppData\\Roaming\\npm\\lt.cmd", "--port", "3000"], // Argumentos para cmd.exe: /c para ejecutar y terminar, luego el comando lt
+      watch     : false,
+      autorestart: true,
+      restart_delay: 5000,
+      cwd       : "C:\\Users\\servidor\\Desktop\\studio-master", // Establecer CWD para el túnel también
       env       : {
-        NODE_ENV: "production", // Opcional para localtunnel, pero no hace daño
+        NODE_ENV: "production",
       }
     }
   ]
