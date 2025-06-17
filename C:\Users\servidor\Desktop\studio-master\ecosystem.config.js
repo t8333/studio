@@ -13,6 +13,7 @@ module.exports = {
         NODE_ENV: "development",
       },
       exec_mode : "fork",
+      windowsHide: true, // <--- AÑADIDO ESTO
       interpreter_args: []
     }
   ]
