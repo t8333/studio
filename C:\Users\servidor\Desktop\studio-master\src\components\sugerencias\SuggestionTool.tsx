@@ -76,6 +76,7 @@ export function SuggestionTool({ doctors, cycles }: SuggestionToolProps) {
   }
 
   const selectedDoctor = doctors.find(d => d.id === form.watch('doctorId'));
+  const selectedCycle = cycles.find(c => c.id === form.watch('cycleId'));
   
   return (
     <div className="space-y-6">
@@ -155,7 +156,16 @@ export function SuggestionTool({ doctors, cycles }: SuggestionToolProps) {
         </Alert>
       )}
 
-      {/* Removed selectedCycle display as prioridadesMarketing is gone */}
+      {selectedCycle && (
+         <Alert variant="default" className="mt-4">
+          <Lightbulb className="h-4 w-4" />
+          <AlertTitle>Información del Ciclo Seleccionado</AlertTitle>
+          <AlertDescription>
+            <p><span className="font-semibold">Nombre:</span> {selectedCycle.nombre}</p>
+            {/* Marketing priorities line removed from here */}
+          </AlertDescription>
+        </Alert>
+      )}
 
       {error && (
         <Alert variant="destructive" className="mt-6">
