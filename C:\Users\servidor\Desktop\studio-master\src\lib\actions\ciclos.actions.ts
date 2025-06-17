@@ -107,4 +107,3 @@ export async function updateCycleStock(cycleId: string, updatedStockItems: Cycle
   revalidatePath('/');
   revalidatePath('/sugerencias');
 }
-
