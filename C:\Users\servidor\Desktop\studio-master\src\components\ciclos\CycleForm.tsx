@@ -15,7 +15,6 @@ import {
   FormMessage,
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { CalendarIcon } from 'lucide-react';
 import { Calendar } from '@/components/ui/calendar';
@@ -35,7 +34,6 @@ const cycleFormSchema = z.object({
   nombre: z.string().min(2, { message: 'El nombre debe tener al menos 2 caracteres.' }).max(100),
   fechaInicio: z.date({ required_error: 'La fecha de inicio es obligatoria.' }),
   fechaFin: z.date({ required_error: 'La fecha de fin es obligatoria.' }),
-  prioridadesMarketing: z.string().max(500).optional().or(z.literal('')),
   stockProductos: z.array(z.object({
     productoId: z.string(),
     cantidad: z.coerce.number().min(0, { message: 'La cantidad no puede ser negativa.' }),
@@ -65,7 +63,6 @@ export function CycleForm({ cycle, allProducts, onSuccess }: CycleFormProps) {
       nombre: cycle?.nombre || '',
       fechaInicio: cycle?.fechaInicio ? parseISO(cycle.fechaInicio) : new Date(),
       fechaFin: cycle?.fechaFin ? parseISO(cycle.fechaFin) : new Date(),
-      prioridadesMarketing: cycle?.prioridadesMarketing || '',
       stockProductos: cycle?.stockProductos
         ? cycle.stockProductos.map(sp => ({ productoId: sp.productoId, cantidad: sp.cantidad }))
         : allProducts.map(p => ({ productoId: p.id, cantidad: 0 })),
@@ -90,7 +87,6 @@ export function CycleForm({ cycle, allProducts, onSuccess }: CycleFormProps) {
         nombre: cycle.nombre,
         fechaInicio: parseISO(cycle.fechaInicio),
         fechaFin: parseISO(cycle.fechaFin),
-        prioridadesMarketing: cycle.prioridadesMarketing || '',
         stockProductos: stockArrayForForm,
       });
     } else { 
@@ -102,7 +98,6 @@ export function CycleForm({ cycle, allProducts, onSuccess }: CycleFormProps) {
         nombre: '',
         fechaInicio: new Date(),
         fechaFin: new Date(),
-        prioridadesMarketing: '',
         stockProductos: stockArrayForForm,
       });
     }
@@ -122,7 +117,6 @@ export function CycleForm({ cycle, allProducts, onSuccess }: CycleFormProps) {
         nombre: data.nombre,
         fechaInicio: data.fechaInicio.toISOString(),
         fechaFin: data.fechaFin.toISOString(),
-        prioridadesMarketing: data.prioridadesMarketing,
         stockProductos: data.stockProductos || [],
       };
       await saveCycle(cycleToSave);
@@ -158,104 +152,91 @@ export function CycleForm({ cycle, allProducts, onSuccess }: CycleFormProps) {
             </FormItem>
           )}
         />
-        
-        <FormField
-          control={form.control}
-          name="fechaInicio"
-          render={({ field }) => (
-            <FormItem className="flex flex-col">
-              <FormLabel>Fecha de Inicio</FormLabel>
-              <Popover>
-                <PopoverTrigger asChild>
-                  <FormControl>
-                    <Button
-                      variant={"outline"}
-                      className={cn(
-                        "w-full pl-3 text-left font-normal",
-                        !field.value && "text-muted-foreground"
-                      )}
-                      disabled={isGuest}
-                    >
-                      {field.value ? (
-                        format(field.value, "PPP", { locale: es })
-                      ) : (
-                        <span>Selecciona una fecha</span>
-                      )}
-                      <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                    </Button>
-                  </FormControl>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0" align="start">
-                  <Calendar
-                    mode="single"
-                    selected={field.value}
-                    onSelect={field.onChange}
-                    disabled={(date) => date < new Date("1900-01-01") || isGuest}
-                    initialFocus
-                    locale={es}
-                  />
-                </PopoverContent>
-              </Popover>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-        <FormField
-          control={form.control}
-          name="fechaFin"
-          render={({ field }) => (
-            <FormItem className="flex flex-col">
-              <FormLabel>Fecha de Fin</FormLabel>
-              <Popover>
-                <PopoverTrigger asChild>
-                  <FormControl>
-                    <Button
-                      variant={"outline"}
-                      className={cn(
-                        "w-full pl-3 text-left font-normal",
-                        !field.value && "text-muted-foreground"
-                      )}
-                      disabled={isGuest}
-                    >
-                      {field.value ? (
-                        format(field.value, "PPP", { locale: es })
-                      ) : (
-                        <span>Selecciona una fecha</span>
-                      )}
-                      <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                    </Button>
-                  </FormControl>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0" align="start">
-                  <Calendar
-                    mode="single"
-                    selected={field.value}
-                    onSelect={field.onChange}
-                    disabled={(date) => date < (form.getValues("fechaInicio") || new Date("1900-01-01")) || isGuest}
-                    initialFocus
-                    locale={es}
-                  />
-                </PopoverContent>
-              </Popover>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-        
-        <FormField
-          control={form.control}
-          name="prioridadesMarketing"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Prioridades de Marketing (Opcional)</FormLabel>
-              <FormControl>
-                <Textarea placeholder="Ej: Enfocarse en productos cardiovasculares, lanzamiento de nuevo analgésico." {...field} disabled={isGuest} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-        
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <FormField
+            control={form.control}
+            name="fechaInicio"
+            render={({ field }) => (
+              <FormItem className="flex flex-col">
+                <FormLabel>Fecha de Inicio</FormLabel>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <FormControl>
+                      <Button
+                        variant={"outline"}
+                        className={cn(
+                          "w-full pl-3 text-left font-normal",
+                          !field.value && "text-muted-foreground"
+                        )}
+                        disabled={isGuest}
+                      >
+                        {field.value ? (
+                          format(field.value, "PPP", { locale: es })
+                        ) : (
+                          <span>Selecciona una fecha</span>
+                        )}
+                        <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                      </Button>
+                    </FormControl>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <Calendar
+                      mode="single"
+                      selected={field.value}
+                      onSelect={field.onChange}
+                      disabled={(date) => date < new Date("1900-01-01") || isGuest}
+                      initialFocus
+                      locale={es}
+                    />
+                  </PopoverContent>
+                </Popover>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="fechaFin"
+            render={({ field }) => (
+              <FormItem className="flex flex-col">
+                <FormLabel>Fecha de Fin</FormLabel>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <FormControl>
+                      <Button
+                        variant={"outline"}
+                        className={cn(
+                          "w-full pl-3 text-left font-normal",
+                          !field.value && "text-muted-foreground"
+                        )}
+                        disabled={isGuest}
+                      >
+                        {field.value ? (
+                          format(field.value, "PPP", { locale: es })
+                        ) : (
+                          <span>Selecciona una fecha</span>
+                        )}
+                        <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                      </Button>
+                    </FormControl>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <Calendar
+                      mode="single"
+                      selected={field.value}
+                      onSelect={field.onChange}
+                      disabled={(date) => date < (form.getValues("fechaInicio") || new Date("1900-01-01")) || isGuest}
+                      initialFocus
+                      locale={es}
+                    />
+                  </PopoverContent>
+                </Popover>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        </div>
+                
         <div>
           <FormLabel>Stock Inicial de Productos</FormLabel>
           <FormDescription>Define la cantidad inicial de cada producto para este ciclo.</FormDescription>
@@ -268,7 +249,7 @@ export function CycleForm({ cycle, allProducts, onSuccess }: CycleFormProps) {
               </AlertDescription>
             </Alert>
           ) : (
-            <ScrollArea className="h-[200px] mt-2 border rounded-md p-2">
+            <ScrollArea className="h-[280px] mt-2 border rounded-md p-2">
               <div className="space-y-3 pr-3">
               {fields.map((field, index) => {
                 const productDetails = allProducts.find(p => p.id === field.productoId);
