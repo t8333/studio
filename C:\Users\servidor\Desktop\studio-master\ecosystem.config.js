@@ -5,7 +5,7 @@ module.exports = {
       name   : "medistock-app",
       interpreter : "C:\\Program Files\\nodejs\\node.exe",
       script    : "C:\\Users\\servidor\\Desktop\\studio-master\\node_modules\\next\\dist\\bin\\next",
-      args      : "dev --turbopack -p 9002",
+      args      : "dev -p 9002", // Eliminado --turbopack
       cwd       : "C:\\Users\\servidor\\Desktop\\studio-master",
       watch     : ["src", "public", "components.json", "next.config.ts", "tailwind.config.ts", "tsconfig.json"],
       ignore_watch : ["node_modules", ".next", "src/lib/data"],
