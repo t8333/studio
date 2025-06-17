@@ -14,19 +14,7 @@ module.exports = {
       },
       exec_mode : "fork",
       interpreter_args: []
-    },
-    {
-      name      : "medistock-tunnel",
-      interpreter : "C:\\Program Files\\nodejs\\node.exe", // Use Node.js to run our wrapper script
-      script    : "C:\\Users\\servidor\\Desktop\\studio-master\\start-localtunnel.js", // Path to our new wrapper script
-      args      : [], // The wrapper script doesn't need arguments here
-      watch     : false, // No need to watch this wrapper script for changes usually
-      autorestart: true, // Restart if it crashes
-      restart_delay: 5000, // Delay before restarting
-      cwd       : "C:\\Users\\servidor\\Desktop\\studio-master", // Set CWD to project root
-      env       : {
-        NODE_ENV: "production", // Or development, doesn't matter much for this script
-      }
     }
+    // La configuración de medistock-tunnel ha sido eliminada
   ]
 }
