@@ -3,7 +3,7 @@ module.exports = {
   apps : [
     {
       name   : "medistock-app",
-      interpreter : "C:\\Program Files\\nodejs\\node.exe",
+      interpreter : "C:\\Program Files\\nodejs\\node.exe", // Ensure this is your Node.js path
       script    : "C:\\Users\\servidor\\Desktop\\studio-master\\node_modules\\next\\dist\\bin\\next",
       args      : "dev --turbopack -p 9002", // Cambiado a modo desarrollo y puerto 9002
       cwd       : "C:\\Users\\servidor\\Desktop\\studio-master",
@@ -17,14 +17,15 @@ module.exports = {
     },
     {
       name      : "medistock-tunnel",
-      script    : "C:\\Windows\\System32\\cmd.exe",
-      args      : ["/c", "C:\\Users\\servidor\\AppData\\Roaming\\npm\\lt.cmd", "--port", "9002"], // Puerto cambiado a 9002
+      interpreter : "C:\\Program Files\\nodejs\\node.exe", // Explicitly use Node.js
+      script    : "C:\\Users\\servidor\\AppData\\Roaming\\npm\\node_modules\\localtunnel\\bin\\lt.js", // Direct path to localtunnel's JS file
+      args      : ["--port", "9002"], // Arguments for lt.js, pointing to port 9002
       watch     : false,
       autorestart: true,
       restart_delay: 5000,
-      cwd       : "C:\\Users\\servidor\\Desktop\\studio-master",
+      cwd       : "C:\\Users\\servidor\\Desktop\\studio-master", // Not strictly necessary for lt, but good for consistency
       env       : {
-        NODE_ENV: "production",
+        NODE_ENV: "production", // or development
       }
     }
   ]
