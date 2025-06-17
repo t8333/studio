@@ -19,13 +19,15 @@ module.exports = {
     },
     {
       name      : "medistock-tunnel",
-      script    : "lt", // Comando de localtunnel (asume instalación global)
+      script    : "C:\\Users\\servidor\\AppData\\Roaming\\npm\\lt.cmd", // Ruta completa a lt.cmd
       args      : "--port 3000", // Apunta al puerto donde corre medistock-app
-      watch     : false,
+      watch     : false, // No es necesario observar cambios en localtunnel
       autorestart: true, // Reinicia si falla
       restart_delay: 5000, // Espera 5 segundos antes de reiniciar
+      // NO se especifica 'interpreter' aquí, para que PM2 trate de ejecutar el .cmd directamente.
+      // El propio archivo .cmd llamará a node.
       env       : {
-        NODE_ENV: "production",
+        NODE_ENV: "production", // Opcional para localtunnel, pero no hace daño
       }
     }
   ]
